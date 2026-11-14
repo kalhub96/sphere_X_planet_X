@@ -1,293 +1,714 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import CelestialSphere from './components/sky/CelestialSphere';
+import { useRouter } from 'next/navigation';
 import {
-  Telescope,
-  Layers,
-  Sparkles,
-  ArrowRight,
-  Radio,
-  Compass,
-  CheckCircle2,
-  ExternalLink,
-  ShieldCheck,
-  Activity,
-  Zap,
-} from 'lucide-react';
+  motion,
+  MotionConfig,
+  AnimatePresence,
+  animate,
+  useInView,
+  useMotionValue,
+  useMotionValueEvent,
+  useScroll,
+  useSpring,
+  useTransform,
+  type MotionValue,
+} from 'framer-motion';
+import CelestialSphere from './components/sky/CelestialSphere';
+import { Telescope, ArrowRight, Compass, Layers, Link2, ExternalLink, Search } from 'lucide-react';
 
-const FEATURED_SHOWCASES = [
+/* ---------- config ---------- */
+// Update via env var when a new SPHEREx release lands; no code change needed.
+const RELEASE = process.env.NEXT_PUBLIC_SPHEREX_RELEASE ?? 'Latest';
+
+const blinkUrl = (ra: number, dec: number, fov = 120) => `/compare?ra=${ra}&dec=${dec}&fov=${fov}`;
+
+// Coordinates are approximate J2000: verify against SIMBAD before relying on them.
+// Movers: use a larger FOV so the source stays in frame across epochs.
+const TARGETS = [
   {
-    id: 'planet-x',
-    title: 'Planet X & Kuiper Belt Search',
-    sector: 'Sedna Recovery Sector',
-    ra: 56.452,
-    dec: 7.892,
-    band: 88,
-    wavelength: '4.26 µm',
-    badge: 'Methane Ice Signature',
-    badgeColor: 'var(--accent-cyan)',
+    id: 'wise0855',
+    title: 'WISE 0855−0714',
+    sector: 'Coldest known brown dwarf',
+    ra: 133.7951,
+    dec: -7.2451,
+    fov: 300,
+    badge: 'Fast-moving brown dwarf',
+    color: 'var(--accent-cyan)',
+    pos: { x: 68, y: 30 },
     description:
-      'Search for high-eccentricity trans-Neptunian objects and potential distant planets via characteristic solid-state CH4 surface ice absorption and high annual parallax.',
+      'A very cold, nearby brown dwarf with a large proper motion. It should visibly shift between SPHEREx epochs, which makes it a good first test for the blink view.',
     metrics: [
-      { label: 'Predicted Distance', value: '> 300 AU' },
-      { label: 'Diagnostic Band', value: '4.26 µm CO2/CH4' },
-      { label: 'Expected Parallax', value: '< 40 mas' },
+      { label: 'Distance', value: '≈ 2.3 pc' },
+      { label: 'Proper motion', value: '≈ 8″/yr' },
+      { label: 'Type', value: 'Y dwarf' },
     ],
-    compareUrl: '/compare?obs_a=spherex_qr3_pass1_0042&obs_b=spherex_qr3_pass2_0042&band=88',
   },
   {
-    id: 'y-dwarf',
-    title: 'Orion Nebula Y-Dwarf Nursery',
-    sector: 'M42 Active Star Formation',
-    ra: 83.8221,
-    dec: -5.3911,
-    band: 33,
-    wavelength: '1.65 µm',
-    badge: 'Sub-Stellar Atmosphere',
-    badgeColor: 'var(--accent-orange)',
+    id: 'barnard',
+    title: "Barnard's Star",
+    sector: 'Highest proper motion star',
+    ra: 269.452,
+    dec: 4.693,
+    fov: 300,
+    badge: 'Nearby red dwarf',
+    color: 'var(--accent-orange)',
+    pos: { x: 32, y: 42 },
     description:
-      'Identify ultra-cool brown dwarfs (T < 450 K) embedded in the Orion starburst complex using differential photometry and diagnostic 1.65 µm atmospheric methane windows.',
+      'The star with the largest known proper motion. Its shift across the sky is large enough to see between scans.',
     metrics: [
-      { label: 'Effective Temp', value: '380 - 450 K' },
-      { label: 'Molecular Features', value: 'CH4, H2O, NH3' },
-      { label: 'Cataloged Passes', value: '48 Epochs' },
+      { label: 'Distance', value: '≈ 1.8 pc' },
+      { label: 'Proper motion', value: '≈ 10.4″/yr' },
+      { label: 'Type', value: 'M dwarf' },
     ],
-    compareUrl: '/compare?obs_a=spherex_qr3_pass1_0042&obs_b=spherex_qr3_pass2_0042&band=33',
   },
   {
-    id: 'nep-survey',
-    title: 'North Ecliptic Pole Deep Survey',
-    sector: 'Continuous Viewing Zone',
-    ra: 270.0,
-    dec: 66.56,
-    band: 50,
-    wavelength: '2.15 µm',
-    badge: 'Calibration Benchmark',
-    badgeColor: 'var(--accent-green)',
+    id: 'epsindi',
+    title: 'Epsilon Indi B',
+    sector: 'Brown dwarf pair around a star',
+    ra: 330.84,
+    dec: -56.786,
+    fov: 300,
+    badge: 'Brown dwarf binary',
+    color: 'var(--accent-gold)',
+    pos: { x: 58, y: 68 },
     description:
-      'Deepest survey pointing in the SPHEREx all-sky map with over 100 overlapping passes, serving as the benchmark for cosmic infrared background (CIB) fluctuation studies.',
+      'A pair of brown dwarfs orbiting the nearby star Epsilon Indi A. The system moves together across the sky.',
     metrics: [
-      { label: 'Overlapping Passes', value: '> 100 Passes' },
-      { label: 'Astrometric Error', value: '< 0.05″ RMS' },
-      { label: 'Primary Array', value: 'Array 3 (Ks)' },
+      { label: 'Distance', value: '≈ 3.6 pc' },
+      { label: 'Proper motion', value: '≈ 4.7″/yr' },
+      { label: 'Type', value: 'T dwarf pair' },
     ],
-    compareUrl: '/compare?obs_a=spherex_qr3_pass1_0042&obs_b=spherex_qr3_pass2_0042&band=50',
+  },
+  {
+    id: 'rwaur',
+    title: 'RW Aurigae',
+    sector: 'Young irregular variable',
+    ra: 76.957,
+    dec: 30.401,
+    fov: 120,
+    badge: 'Variable star',
+    color: 'var(--accent-green)',
+    pos: { x: 22, y: 25 },
+    description: 'A young star with irregular brightness changes. Watch for flux variation rather than motion.',
+    metrics: [
+      { label: 'Signal', value: 'Brightness change' },
+      { label: 'Type', value: 'T Tauri star' },
+      { label: 'Look for', value: 'Flux dips' },
+    ],
+  },
+  {
+    id: 'rdra',
+    title: 'R Draconis',
+    sector: 'Long-period pulsating variable',
+    ra: 248.18,
+    dec: 66.75,
+    fov: 120,
+    badge: 'Variable star',
+    color: 'var(--accent-cyan)',
+    pos: { x: 76, y: 62 },
+    description: 'A Mira-type variable that swells and fades over months. Compare epochs to see the change.',
+    metrics: [
+      { label: 'Signal', value: 'Brightness change' },
+      { label: 'Type', value: 'Mira variable' },
+      { label: 'Look for', value: 'Flux change' },
+    ],
   },
 ];
 
 const STAT_BADGES = [
-  { value: '102', label: 'Spectroscopic Channels', sub: '0.75 – 5.0 µm All-Sky' },
-  { value: '6.2″', label: 'Pixel Plate Scale', sub: 'WCS TAN Astrometry' },
-  { value: '4', label: 'Physical SED Templates', sub: 'Reduced χ² Minimization' },
-  { value: 'QR3', label: 'NASA IRSA Data Release', sub: 'SIA2 & IBE Live Pipeline' },
+  { value: '102', label: 'Spectral Bands', sub: 'Near-infrared, 0.75 – 5.0 µm.' },
+  { value: '6', label: 'Detector Arrays', sub: 'Each array covers its own wavelength range.' },
+  { value: '6 mo', label: 'Full-Sky Cadence', sub: 'The whole sky is mapped every six months.' },
+  { value: '6.2″', label: 'Pixel Scale', sub: 'Angular size of one SPHEREx pixel.' },
 ];
 
-export default function HomePage() {
+const CAPABILITIES = [
+  {
+    n: '01',
+    title: '3D Celestial Explorer',
+    desc: 'Browse the sky on an interactive sphere and pick a patch to inspect.',
+    href: '/explore',
+    cta: 'Launch',
+    Icon: Compass,
+  },
+  {
+    n: '02',
+    title: 'Blink Viewer',
+    desc: 'Step through images of one patch over time to spot objects that move or change brightness.',
+    href: blinkUrl(133.7951, -7.2451, 300),
+    cta: 'Open',
+    Icon: Layers,
+  },
+  {
+    n: '03',
+    title: 'Shareable URLs',
+    desc: 'Every view is set by RA, Dec and field of view in the URL, so it can be linked or embedded.',
+    href: blinkUrl(269.452, 4.693, 300),
+    cta: 'Try',
+    Icon: Link2,
+  },
+];
+
+const MANIFESTO =
+  'Compare images of the same patch taken at different times. Anything that moves or changes brightness stands out.';
+
+const GRAD = 'bg-gradient-to-r from-[var(--accent-cyan)] via-[var(--accent-gold)] to-[var(--accent-orange)] bg-clip-text text-transparent';
+const PANEL = 'glass-panel border border-[var(--border-subtle)] backdrop-blur-md';
+const LABEL = 'font-mono text-xs uppercase tracking-[0.08em]';
+const INPUT =
+  'w-full px-3 py-3 rounded-lg bg-[rgba(13,18,32,0.85)] border border-[var(--border-subtle)] text-sm text-[#F0F4FF] placeholder:text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent-cyan)]';
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+
+/* ---------- animation helpers ---------- */
+function Reveal({ children, delay = 0, y = 40, className = '' }: { children: React.ReactNode; delay?: number; y?: number; className?: string }) {
   return (
-    <div className="relative min-h-screen w-screen overflow-x-hidden bg-[#060810] text-[#F0F4FF] flex flex-col font-sans select-none">
-      {/* 1. Full-Screen Interactive 3D Celestial Sphere Background */}
-      <div className="fixed inset-0 z-0 pointer-events-auto opacity-70">
-        <CelestialSphere className="w-full h-full" />
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-80px' }}
+      transition={{ duration: 0.8, ease: EASE, delay }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
-      {/* Atmospheric Vignette & Radial Overlay */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(6,8,16,0.2)_0%,rgba(6,8,16,0.7)_65%,#060810_100%)]" />
-
-      {/* 2. Top Header Navigation */}
-      <header className="relative z-20 px-6 py-4 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[rgba(6,8,16,0.6)] backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[rgba(0,229,255,0.15)] text-[var(--accent-cyan)] flex items-center justify-center border border-[rgba(0,229,255,0.3)] shadow-[0_0_12px_rgba(0,229,255,0.3)]">
-            <Telescope className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-base font-bold tracking-tight bg-gradient-to-r from-white to-[var(--accent-cyan)] bg-clip-text text-transparent">
-              SkyTrace
-            </h1>
-            <p className="text-[10px] text-[var(--text-secondary)] font-mono">
-              NASA SPHEREx Discovery Platform
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[rgba(0,229,255,0.08)] border border-[rgba(0,229,255,0.25)] text-xs text-[var(--accent-cyan)] font-mono">
-            <span className="w-2 h-2 rounded-full bg-[var(--accent-cyan)] animate-pulse" />
-            NASA Space Apps Challenge 2026
-          </div>
-
-          <Link
-            href="/explore"
-            className="px-4 py-2 rounded-lg bg-[var(--accent-cyan)] text-[#060810] text-xs font-bold hover:shadow-[0_0_16px_rgba(0,229,255,0.5)] transition-all flex items-center gap-1.5"
+function SplitWords({ text, wordClass = '', delay = 0 }: { text: string; wordClass?: string; delay?: number }) {
+  const words = text.split(' ');
+  return (
+    <motion.span
+      aria-label={text}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, margin: '-60px' }}
+      variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: delay } } }}
+    >
+      {words.map((w, i) => (
+        <span key={i} aria-hidden="true" className="inline-block overflow-hidden align-bottom pb-[0.12em] -mb-[0.12em] mr-[0.25em]">
+          <motion.span
+            className={`inline-block ${wordClass}`}
+            variants={{
+              hidden: { y: '115%', rotate: 4 },
+              show: { y: 0, rotate: 0, transition: { duration: 0.9, ease: EASE } },
+            }}
           >
-            <span>Launch Explorer</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      </header>
+            {w}
+          </motion.span>
+        </span>
+      ))}
+    </motion.span>
+  );
+}
 
-      {/* 3. Hero Section */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-16 sm:py-20 max-w-6xl mx-auto w-full text-center">
-        {/* Mission Pill */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[rgba(255,255,255,0.06)] border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)] font-mono mb-6 backdrop-blur-md shadow-lg">
-          <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
-          <span>Planet X and SPHEREx — Multi-Epoch Astronomical Transient Engine</span>
-        </div>
+function ScrollFillText({ text, className = '' }: { text: string; className?: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start 0.85', 'end 0.45'] });
+  const words = text.split(' ');
+  return (
+    <p ref={ref} className={className}>
+      {words.map((w, i) => (
+        <FillWord key={i} progress={scrollYProgress} range={[i / words.length, (i + 1) / words.length]}>
+          {w}
+        </FillWord>
+      ))}
+    </p>
+  );
+}
 
-        {/* Main Headline */}
-        <h2 className="text-4xl sm:text-6xl font-extrabold tracking-tight max-w-4xl leading-[1.1] mb-6">
-          Explore the Sky.{' '}
-          <span className="bg-gradient-to-r from-[var(--accent-cyan)] via-[var(--accent-gold)] to-[var(--accent-orange)] bg-clip-text text-transparent">
-            Compare the Evidence.
-          </span>
-        </h2>
+function FillWord({ children, progress, range }: { children: React.ReactNode; progress: MotionValue<number>; range: [number, number] }) {
+  const opacity = useTransform(progress, range, [0.14, 1]);
+  return (
+    <motion.span style={{ opacity }} className="inline-block mr-[0.28em]">
+      {children}
+    </motion.span>
+  );
+}
 
-        {/* Subtitle */}
-        <p className="text-sm sm:text-lg text-[var(--text-secondary)] max-w-2xl leading-relaxed mb-8">
-          Investigate real multi-epoch infrared sky observations from NASA IRSA across 102 spectroscopic bands. Discover moving asteroids, ultra-cool brown dwarfs, and candidate trans-Neptunian objects through differential photometry and honest scientific evidence.
-        </p>
+function CountUp({ value, className = '' }: { value: string; className?: string }) {
+  const match = value.match(/^(\d+(?:\.\d+)?)(.*)$/);
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: '-40px' });
+  const [n, setN] = useState(0);
+  const target = match ? parseFloat(match[1]) : 0;
+  const decimals = match ? (match[1].split('.')[1]?.length ?? 0) : 0;
 
-        {/* Dual Primary Call-to-Actions */}
-        <div className="flex flex-wrap items-center justify-center gap-4 mb-16">
-          <Link
-            href="/explore"
-            className="px-6 py-3.5 rounded-xl bg-[var(--accent-cyan)] text-[#060810] font-bold text-sm hover:shadow-[0_0_24px_rgba(0,229,255,0.6)] transition-all flex items-center gap-2"
-          >
-            <Compass className="w-4 h-4" />
-            <span>Launch 3D Celestial Explorer</span>
-          </Link>
+  useEffect(() => {
+    if (!inView || !match) return;
+    const controls = animate(0, target, { duration: 1.8, ease: EASE, onUpdate: setN });
+    return () => controls.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inView]);
 
-          <Link
-            href="/compare"
-            className="px-6 py-3.5 rounded-xl bg-[rgba(13,18,32,0.85)] hover:bg-[rgba(255,255,255,0.1)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] text-sm font-semibold transition-all flex items-center gap-2 backdrop-blur-md"
-          >
-            <Layers className="w-4 h-4 text-[var(--accent-orange)]" />
-            <span>Open Blink Comparator Engine</span>
-          </Link>
-        </div>
+  return (
+    <div ref={ref} className={className}>
+      {match ? `${n.toFixed(decimals)}${match[2]}` : value}
+    </div>
+  );
+}
 
-        {/* 4. Stat Badges Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full mb-16">
-          {STAT_BADGES.map((stat, i) => (
-            <div
-              key={i}
-              className="glass-panel p-4 text-left border border-[var(--border-subtle)] backdrop-blur-md transition-all hover:border-[var(--border-hover)]"
+function Magnetic({ children, strength = 0.3 }: { children: React.ReactNode; strength?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const x = useSpring(0, { stiffness: 220, damping: 16 });
+  const y = useSpring(0, { stiffness: 220, damping: 16 });
+  return (
+    <motion.div
+      ref={ref}
+      style={{ x, y }}
+      className="inline-block"
+      onMouseMove={(e) => {
+        const r = ref.current?.getBoundingClientRect();
+        if (!r) return;
+        x.set((e.clientX - (r.left + r.width / 2)) * strength);
+        y.set((e.clientY - (r.top + r.height / 2)) * strength);
+      }}
+      onMouseLeave={() => {
+        x.set(0);
+        y.set(0);
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function CursorGlow() {
+  const x = useMotionValue(-600);
+  const y = useMotionValue(-600);
+  const sx = useSpring(x, { stiffness: 110, damping: 20 });
+  const sy = useSpring(y, { stiffness: 110, damping: 20 });
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      x.set(e.clientX - 200);
+      y.set(e.clientY - 200);
+    };
+    window.addEventListener('mousemove', move);
+    return () => window.removeEventListener('mousemove', move);
+  }, [x, y]);
+  return (
+    <motion.div
+      aria-hidden="true"
+      style={{ x: sx, y: sy }}
+      className="pointer-events-none fixed left-0 top-0 z-[5] hidden h-[400px] w-[400px] rounded-full md:block bg-[radial-gradient(circle,rgba(0,229,255,0.10),transparent_65%)]"
+    />
+  );
+}
+
+/* ---------- coordinate form ---------- */
+function CoordForm() {
+  const router = useRouter();
+  const [ra, setRa] = useState('');
+  const [dec, setDec] = useState('');
+  const [fov, setFov] = useState('120');
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const q = new URLSearchParams({ ra: ra.trim(), dec: dec.trim(), fov });
+        router.push(`/compare?${q.toString()}`);
+      }}
+      className={`mx-auto mt-8 max-w-3xl p-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto] text-left bg-[rgba(13,18,32,0.85)] ${PANEL} rounded-2xl`}
+    >
+      <label className="block">
+        <span className={`block mb-1 text-[var(--text-secondary)] ${LABEL}`}>RA (deg or hh:mm:ss)</span>
+        <input value={ra} onChange={(e) => setRa(e.target.value)} required name="ra" placeholder="08:55:10.831" className={INPUT} />
+      </label>
+      <label className="block">
+        <span className={`block mb-1 text-[var(--text-secondary)] ${LABEL}`}>Dec (deg or dd:mm:ss)</span>
+        <input value={dec} onChange={(e) => setDec(e.target.value)} required name="dec" placeholder="-07:14:42.53" className={INPUT} />
+      </label>
+      <label className="block">
+        <span className={`block mb-1 text-[var(--text-secondary)] ${LABEL}`}>Field of view</span>
+        <select value={fov} onChange={(e) => setFov(e.target.value)} name="fov" className={INPUT}>
+          <option value="60">1′</option>
+          <option value="120">2′</option>
+          <option value="300">5′</option>
+          <option value="600">10′</option>
+        </select>
+      </label>
+      <button
+        type="submit"
+        className="self-end px-5 py-3 rounded-lg bg-[var(--accent-cyan)] text-[#060810] text-sm font-bold hover:shadow-[0_0_16px_rgba(0,229,255,0.5)] transition-all flex items-center justify-center gap-2"
+      >
+        <Search className="w-4 h-4" /> Blink
+      </button>
+    </form>
+  );
+}
+
+/* ---------- page ---------- */
+export default function HomePage() {
+  const [active, setActive] = useState(0);
+  const [auto, setAuto] = useState(true);
+  const [navHidden, setNavHidden] = useState(false);
+  const n = TARGETS.length;
+
+  const { scrollY, scrollYProgress } = useScroll();
+  const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30 });
+
+  useMotionValueEvent(scrollY, 'change', (latest) => {
+    const prev = scrollY.getPrevious() ?? 0;
+    setNavHidden(latest > prev && latest > 120);
+  });
+
+  const bgScale = useTransform(scrollYProgress, [0, 1], [1, 1.28]);
+
+  const heroRef = useRef<HTMLElement>(null);
+  const { scrollYProgress: heroP } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
+  const heroY = useTransform(heroP, [0, 1], [0, 160]);
+  const heroOpacity = useTransform(heroP, [0, 0.75], [1, 0]);
+  const heroScale = useTransform(heroP, [0, 1], [1, 0.93]);
+
+  // autoplay until the user picks a target
+  useEffect(() => {
+    if (!auto) return;
+    const t = setInterval(() => setActive((i) => (i + 1) % n), 6000);
+    return () => clearInterval(t);
+  }, [auto, n]);
+
+  const selectTarget = (i: number) => {
+    setActive(i);
+    setAuto(false);
+  };
+
+  const target = TARGETS[active];
+
+  return (
+    <MotionConfig reducedMotion="user">
+      <div className="relative min-h-screen w-screen overflow-x-hidden bg-[#060810] text-[#F0F4FF] font-sans">
+        <motion.div
+          style={{ scaleX: progress }}
+          className="fixed top-0 left-0 right-0 h-[3px] origin-left z-50 bg-gradient-to-r from-[var(--accent-cyan)] via-[var(--accent-gold)] to-[var(--accent-orange)]"
+        />
+
+        <motion.div style={{ scale: bgScale }} className="fixed inset-0 z-0 pointer-events-auto opacity-70">
+          <CelestialSphere className="w-full h-full" />
+        </motion.div>
+        <div className="fixed inset-0 z-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(6,8,16,0.2)_0%,rgba(6,8,16,0.7)_65%,#060810_100%)]" />
+        <CursorGlow />
+
+        <motion.header
+          animate={{ y: navHidden ? '-100%' : '0%' }}
+          transition={{ duration: 0.4, ease: EASE }}
+          className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[rgba(6,8,16,0.72)] backdrop-blur-md"
+        >
+          <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[rgba(0,229,255,0.15)] text-[var(--accent-cyan)] flex items-center justify-center border border-[rgba(0,229,255,0.3)] shadow-[0_0_12px_rgba(0,229,255,0.3)]">
+                <Telescope className="w-5 h-5" />
+              </span>
+              <span className="text-lg font-extrabold tracking-tight">SkyTrace</span>
+            </Link>
+
+            <nav className={`hidden md:flex items-center gap-8 text-[var(--text-secondary)] ${LABEL}`}>
+              <a href="#how" className="hover:text-[var(--accent-cyan)] transition-colors">How it works</a>
+              <a href="#targets" className="hover:text-[var(--accent-cyan)] transition-colors">Try a target</a>
+              <a href="#capabilities" className="hover:text-[var(--accent-cyan)] transition-colors">Tools</a>
+            </nav>
+
+            <Link
+              href="/explore"
+              className="px-4 py-2 rounded-lg bg-[var(--accent-cyan)] text-[#060810] text-sm font-bold hover:shadow-[0_0_16px_rgba(0,229,255,0.5)] transition-all flex items-center gap-1.5"
             >
-              <div className="text-2xl sm:text-3xl font-extrabold font-mono text-[var(--accent-cyan)] mb-1">
-                {stat.value}
-              </div>
-              <div className="text-xs font-bold text-[var(--text-primary)]">
-                {stat.label}
-              </div>
-              <div className="text-[11px] text-[var(--text-muted)] font-mono">
-                {stat.sub}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* 5. Featured Observation Showcase Cards */}
-        <div className="w-full text-left space-y-4">
-          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2.5">
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-[var(--accent-gold)]" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--text-primary)] font-mono">
-                Featured Investigation Showcases
-              </h3>
-            </div>
-            <span className="text-xs font-mono text-[var(--text-secondary)]">
-              Pre-computed Multi-Epoch Baselines
-            </span>
+              Launch Explorer <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
+        </motion.header>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {FEATURED_SHOWCASES.map((showcase) => (
-              <div
-                key={showcase.id}
-                className="glass-panel p-5 flex flex-col justify-between border border-[var(--border-subtle)] hover:border-[var(--border-hover)] transition-all group backdrop-blur-md"
+        <main className="relative z-10">
+          {/* HERO */}
+          <section ref={heroRef} className="relative min-h-[92vh] flex items-center">
+            <motion.div
+              style={{ y: heroY, opacity: heroOpacity, scale: heroScale }}
+              className="max-w-6xl mx-auto px-5 pt-20 pb-24 text-center w-full"
+            >
+              <motion.span
+                initial={{ opacity: 0, y: -16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: EASE }}
+                className={`inline-block px-4 py-2 rounded-full border border-[var(--border-subtle)] bg-[rgba(13,18,32,0.7)] backdrop-blur-md text-[var(--text-secondary)] ${LABEL}`}
               >
-                <div>
-                  {/* Badge & Sector */}
-                  <div className="flex items-center justify-between mb-2">
-                    <span
-                      className="text-[10px] font-mono px-2 py-0.5 rounded-full font-bold"
-                      style={{
-                        backgroundColor: `${showcase.badgeColor}20`,
-                        color: showcase.badgeColor,
-                        border: `1px solid ${showcase.badgeColor}40`,
-                      }}
+                NASA SPHEREx · {RELEASE} release
+              </motion.span>
+
+              <h1 className="mt-6 mb-6 text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.06]">
+                <SplitWords text="Watch the sky change." delay={0.15} />
+                <br />
+                <SplitWords text="Spot what moves." wordClass={GRAD} delay={0.5} />
+              </h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.9, ease: EASE, delay: 0.9 }}
+                className="max-w-2xl mx-auto text-base sm:text-lg text-[var(--text-secondary)] leading-relaxed"
+              >
+                Enter a position on the sky and see SPHEREx images of that patch played like a short video.
+                Moving asteroids, comets, stars and brown dwarfs show up as points that shift between frames.
+              </motion.p>
+
+              <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE, delay: 1.05 }}>
+                <CoordForm />
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-4">
+                  <Magnetic>
+                    <Link
+                      href="/explore"
+                      className="px-6 py-3.5 rounded-xl bg-[var(--accent-cyan)] text-[#060810] font-bold text-sm hover:shadow-[0_0_24px_rgba(0,229,255,0.6)] transition-all flex items-center gap-2"
                     >
-                      {showcase.badge}
-                    </span>
-                    <span className="text-[11px] font-mono text-[var(--text-muted)]">
-                      Band {showcase.band}
-                    </span>
-                  </div>
+                      <Compass className="w-4 h-4" /> Browse the sky
+                    </Link>
+                  </Magnetic>
+                  <Magnetic>
+                    <a
+                      href="#targets"
+                      className={`px-6 py-3.5 rounded-xl text-sm font-semibold flex items-center gap-2 bg-[rgba(13,18,32,0.85)] hover:border-[var(--border-hover)] ${PANEL}`}
+                    >
+                      <Layers className="w-4 h-4 text-[var(--accent-orange)]" /> Try an example
+                    </a>
+                  </Magnetic>
+                </div>
+              </motion.div>
+            </motion.div>
+          </section>
 
-                  <h4 className="text-base font-bold text-[var(--text-primary)] group-hover:text-[var(--accent-cyan)] transition-colors mb-1">
-                    {showcase.title}
-                  </h4>
-                  <div className="text-xs font-mono text-[var(--accent-gold)] mb-3">
-                    {showcase.sector} ({showcase.ra.toFixed(1)}°, {showcase.dec >= 0 ? `+${showcase.dec.toFixed(1)}` : showcase.dec.toFixed(1)}°)
-                  </div>
+          {/* HOW IT WORKS + STATS */}
+          <section id="how" className="max-w-6xl mx-auto px-5 py-28 scroll-mt-20">
+            <h2 className="mt-4 mb-8 text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+              <SplitWords text="Find discoveries by" />{' '}
+              <SplitWords text="comparing images over time." wordClass={GRAD} delay={0.3} />
+            </h2>
 
-                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-4">
-                    {showcase.description}
-                  </p>
+            <ScrollFillText text={MANIFESTO} className="max-w-4xl text-2xl sm:text-4xl font-semibold leading-snug tracking-tight text-[var(--text-primary)]" />
 
-                  {/* Telemetry Metrics */}
-                  <div className="bg-[rgba(0,0,0,0.35)] p-2.5 rounded-lg border border-[var(--border-subtle)] space-y-1 mb-4 font-mono text-[11px]">
-                    {showcase.metrics.map((m, idx) => (
-                      <div key={idx} className="flex justify-between">
-                        <span className="text-[var(--text-muted)]">{m.label}:</span>
-                        <span className="text-[var(--text-primary)] font-semibold">{m.value}</span>
+            <div className={`mt-14 grid grid-cols-2 lg:grid-cols-4 ${PANEL} overflow-hidden`}>
+              {STAT_BADGES.map((s, i) => (
+                <motion.div
+                  key={s.label}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-60px' }}
+                  transition={{ duration: 0.8, ease: EASE, delay: i * 0.12 }}
+                  className={`p-6 border-[var(--border-subtle)] ${i % 2 === 0 ? 'border-r' : ''} ${i < 2 ? 'border-b lg:border-b-0' : ''} ${i < 3 ? 'lg:border-r' : 'lg:border-r-0'}`}
+                >
+                  <CountUp value={s.value} className={`text-4xl font-extrabold font-mono ${GRAD}`} />
+                  <div className={`mt-3 mb-1 text-[var(--accent-cyan)] ${LABEL}`}>{s.label}</div>
+                  <p className="text-sm text-[var(--text-secondary)] leading-snug">{s.sub}</p>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+
+          {/* TARGETS */}
+          <section id="targets" className="scroll-mt-20 py-20">
+            <div className="w-full max-w-6xl mx-auto px-5">
+              <h2 className="mt-4 mb-2 text-3xl sm:text-4xl font-extrabold tracking-tight">
+                <SplitWords text="Try a known target" />
+              </h2>
+              <p className="mb-8 text-[var(--text-secondary)] max-w-2xl">
+                Five objects that show motion or brightness change. Pick one and open it in the blink viewer.
+              </p>
+
+              <div className="grid lg:grid-cols-[1fr_1.2fr] gap-5">
+                <div role="tablist" aria-label="Example targets" className="flex flex-col gap-3">
+                  {TARGETS.map((s, i) => (
+                    <motion.button
+                      key={s.id}
+                      role="tab"
+                      aria-selected={i === active}
+                      onClick={() => selectTarget(i)}
+                      initial={{ opacity: 0, x: -40 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true, margin: '-60px' }}
+                      transition={{ duration: 0.7, ease: EASE, delay: i * 0.08 }}
+                      className={`text-left p-5 rounded-2xl border backdrop-blur-md transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-gold)] ${
+                        i === active
+                          ? 'border-[var(--accent-cyan)] bg-[rgba(13,18,32,0.9)] shadow-[inset_0_0_0_1px_var(--accent-cyan)]'
+                          : 'border-[var(--border-subtle)] bg-[rgba(13,18,32,0.7)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]'
+                      }`}
+                    >
+                      <div className="font-mono text-xs font-bold mb-1" style={{ color: s.color }}>{s.badge}</div>
+                      <h3 className="text-lg font-bold text-[var(--text-primary)]">{s.title}</h3>
+                      <div className="font-mono text-xs text-[var(--accent-gold)]">
+                        {s.sector} ({s.ra.toFixed(2)}°, {s.dec >= 0 ? '+' : ''}{s.dec.toFixed(2)}°)
                       </div>
-                    ))}
-                  </div>
+                      <AnimatePresence initial={false}>
+                        {i === active && (
+                          <motion.p
+                            key="desc"
+                            initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                            animate={{ height: 'auto', opacity: 1, marginTop: 8 }}
+                            exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                            transition={{ duration: 0.45, ease: EASE }}
+                            className="text-sm leading-relaxed overflow-hidden"
+                          >
+                            {s.description}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                    </motion.button>
+                  ))}
                 </div>
 
-                {/* Direct Action Link */}
-                <Link
-                  href={showcase.compareUrl}
-                  className="w-full py-2 rounded-lg bg-[rgba(255,255,255,0.06)] hover:bg-[var(--accent-cyan)] hover:text-[#060810] border border-[var(--border-subtle)] text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                <motion.div
+                  initial={{ opacity: 0, x: 40 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, margin: '-60px' }}
+                  transition={{ duration: 0.8, ease: EASE, delay: 0.15 }}
+                  className={`p-6 flex flex-col gap-5 ${PANEL}`}
                 >
-                  <span>Launch Investigation</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      </main>
+                  <div
+                    aria-hidden="true"
+                    className="relative aspect-[1.6] lg:aspect-[2] rounded-xl overflow-hidden bg-[radial-gradient(circle,rgba(0,229,255,0.08),transparent_70%)]"
+                  >
+                    {[30, 55, 80].map((w) => (
+                      <i
+                        key={w}
+                        className="absolute left-1/2 top-1/2 rounded-full border border-[rgba(0,229,255,0.28)] -translate-x-1/2 -translate-y-1/2 aspect-square"
+                        style={{ width: `${w}%` }}
+                      />
+                    ))}
+                    <motion.span
+                      className="absolute left-1/2 top-1/2 h-[2px] w-1/2 origin-left bg-gradient-to-r from-[var(--accent-cyan)] to-transparent"
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 6, ease: 'linear' }}
+                    />
+                    <span
+                      className="absolute w-4 h-4 rounded-full border-2 transition-all duration-700"
+                      style={{ left: `${target.pos.x}%`, top: `${target.pos.y}%`, borderColor: target.color, boxShadow: `0 0 14px ${target.color}` }}
+                    />
+                  </div>
 
-      {/* 6. Footer */}
-      <footer className="relative z-20 px-6 py-6 border-t border-[var(--border-subtle)] bg-[rgba(6,8,16,0.85)] text-xs text-[var(--text-secondary)] flex flex-col sm:flex-row items-center justify-between gap-4 font-mono">
-        <div className="flex items-center gap-2">
-          <span>SkyTrace Discovery Engine</span>
-          <span>•</span>
-          <span>NASA Space Apps Challenge 2026</span>
-          <span>•</span>
-          <span className="text-[var(--accent-cyan)]">SPHEREx QR3 Data Release</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link href="/explore" className="hover:text-white transition-colors">
-            3D Explorer
-          </Link>
-          <Link href="/compare" className="hover:text-white transition-colors">
-            Blink Viewer
-          </Link>
-          <a
-            href="https://irsa.ipac.caltech.edu"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-white transition-colors flex items-center gap-1"
-          >
-            <span>NASA IRSA</span>
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        </div>
-      </footer>
-    </div>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={target.id}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -16 }}
+                      transition={{ duration: 0.35, ease: EASE }}
+                      className="grid grid-cols-3 gap-3"
+                    >
+                      {target.metrics.map((m) => (
+                        <div key={m.label} className="p-3 rounded-lg border border-[var(--border-subtle)] bg-[rgba(0,0,0,0.35)]">
+                          <div className="font-mono text-xs text-[var(--text-secondary)] mb-1">{m.label}</div>
+                          <div className="text-sm font-bold">{m.value}</div>
+                        </div>
+                      ))}
+                    </motion.div>
+                  </AnimatePresence>
+
+                  <Link
+                    href={blinkUrl(target.ra, target.dec, target.fov)}
+                    className="py-3 rounded-xl bg-[var(--accent-cyan)] text-[#060810] text-sm font-bold flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(0,229,255,0.5)] transition-all"
+                  >
+                    Open in blink viewer <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </motion.div>
+              </div>
+            </div>
+          </section>
+
+          {/* TOOLS */}
+          <section id="capabilities" className="max-w-6xl mx-auto px-5 py-28 scroll-mt-20">
+            <h2 className="mt-4 mb-9 text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+              <SplitWords text="Simple tools for" />{' '}
+              <SplitWords text="spotting motion." wordClass={GRAD} delay={0.25} />
+            </h2>
+
+            <div className="space-y-3">
+              {CAPABILITIES.map(({ n: num, title, desc, href, cta, Icon }, i) => (
+                <motion.div
+                  key={num}
+                  initial={{ opacity: 0, x: -70 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, margin: '-60px' }}
+                  transition={{ duration: 0.8, ease: EASE, delay: i * 0.12 }}
+                >
+                  <Link
+                    href={href}
+                    className={`group grid md:grid-cols-[56px_1fr_1.3fr_auto] gap-2 md:gap-6 items-center p-6 hover:border-[var(--accent-cyan)] transition-colors ${PANEL}`}
+                  >
+                    <span className={`text-[var(--accent-cyan)] ${LABEL}`}>{num}</span>
+                    <h3 className="text-xl font-bold flex items-center gap-2">
+                      <Icon className="w-5 h-5 text-[var(--accent-orange)] transition-transform duration-500 group-hover:rotate-12 group-hover:scale-125" /> {title}
+                    </h3>
+                    <p className="text-sm text-[var(--text-secondary)]">{desc}</p>
+                    <span className={`text-[var(--accent-cyan)] ${LABEL} transition-transform duration-300 group-hover:translate-x-2`}>{cta} →</span>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+
+          {/* FINAL CTA */}
+          <section className="max-w-4xl mx-auto px-5 pt-8 pb-28">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 60 }}
+              whileInView={{ opacity: 1, scale: 1, y: 0 }}
+              viewport={{ once: true, margin: '-100px' }}
+              transition={{ duration: 1, ease: EASE }}
+              className={`relative overflow-hidden p-10 sm:p-14 text-center ${PANEL}`}
+            >
+              <motion.div
+                aria-hidden="true"
+                className="pointer-events-none absolute -top-1/2 left-1/2 h-[120%] w-[80%] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(0,229,255,0.14),transparent_65%)]"
+                animate={{ scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
+                transition={{ repeat: Infinity, duration: 7, ease: 'easeInOut' }}
+              />
+              <h2 className="relative text-3xl sm:text-5xl font-extrabold tracking-tight mb-4">
+                <SplitWords text="Start looking." wordClass={GRAD} />
+              </h2>
+              <Reveal delay={0.3} className="relative">
+                <p className="max-w-xl mx-auto text-[var(--text-secondary)] mb-8">
+                  Pick any patch of sky and see how it changes. New discoveries need many eyes.
+                </p>
+              </Reveal>
+              <Reveal delay={0.45} className="relative">
+                <div className="flex flex-wrap justify-center gap-4">
+                  <Magnetic>
+                    <Link
+                      href="/explore"
+                      className="inline-block px-6 py-3.5 rounded-xl bg-[var(--accent-cyan)] text-[#060810] font-bold text-sm hover:shadow-[0_0_24px_rgba(0,229,255,0.6)] transition-all"
+                    >
+                      Launch 3D Explorer
+                    </Link>
+                  </Magnetic>
+                  <Magnetic>
+                    <a
+                      href="#how"
+                      className="inline-block px-6 py-3.5 rounded-xl border border-[var(--border-subtle)] bg-[rgba(13,18,32,0.85)] text-sm font-semibold hover:border-[var(--border-hover)] transition-all"
+                    >
+                      How it works
+                    </a>
+                  </Magnetic>
+                </div>
+              </Reveal>
+            </motion.div>
+          </section>
+        </main>
+
+        <footer className="relative z-20 px-6 py-6 border-t border-[var(--border-subtle)] bg-[rgba(6,8,16,0.85)] text-sm text-[var(--text-secondary)] flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span>
+            SkyTrace · NASA Space Apps Challenge 2026 · <span className="text-[var(--accent-cyan)]">SPHEREx {RELEASE} release</span>
+          </span>
+          <span className="flex items-center gap-5">
+            <Link href="/explore" className="hover:text-white transition-colors">3D Explorer</Link>
+            <Link href="/compare" className="hover:text-white transition-colors">Blink Viewer</Link>
+            <a
+              href="https://irsa.ipac.caltech.edu/Missions/spherex.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors inline-flex items-center gap-1"
+            >
+              NASA IRSA <ExternalLink className="w-3 h-3" />
+            </a>
+          </span>
+        </footer>
+      </div>
+    </MotionConfig>
   );
 }
