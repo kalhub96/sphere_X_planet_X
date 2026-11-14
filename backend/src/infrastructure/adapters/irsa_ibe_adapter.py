@@ -30,7 +30,9 @@ class IRSAIBEAdapter:
         database_url: str = "sqlite+aiosqlite:///./data/skytrace.db",
         timeout: float = 3.5,
         cache: RedisCache | None = None,
+        allow_simulation: bool = True,
     ) -> None:
+        self._allow_simulation = allow_simulation
         self._database_url = database_url
         self._timeout = timeout
         self._parser = AstropyFITSAdapter()
@@ -58,7 +60,14 @@ class IRSAIBEAdapter:
             except Exception:
                 pass
 
-        # Synthesize real-physics calibrated SPHEREx FITS cutout
+        # The live download failed. Either refuse, or return a frame that is
+        # explicitly flagged ``is_simulated=True`` (never silently passed off
+        # as archive data).
+        if not self._allow_simulation:
+            raise NoDataError(
+                f"Could not download the SPHEREx cutout for {obs_id} from IRSA, "
+                "and simulated data is disabled (ALLOW_SIMULATED_DATA=false)."
+            )
         return self._synthesize_calibrated_cutout(obs_id, band)
 
     async def _fits_url_for(self, obs_id: str) -> str:
@@ -81,6 +90,10 @@ class IRSAIBEAdapter:
         return obs_id
 
     def _synthesize_calibrated_cutout(self, obs_id: str, band: int) -> FITSImage:
+        """OFFLINE DEMO ONLY: build a synthetic frame (noise + scripted sources).
+
+        The result carries ``is_simulated=True``. It is NOT SPHEREx data.
+        """
         ra = 133.7951
         dec = -7.2451
         pass_num = 1
@@ -208,6 +221,7 @@ class IRSAIBEAdapter:
             band_index=b_idx,
             obs_id=obs_id,
             quality_pct=round(clean_pct, 1),
+            is_simulated=True,
         )
 
     def _render_gaussian_source(self, data: np.ndarray, cx: float, cy: float, flux: float, fwhm: float = 2.2) -> None:

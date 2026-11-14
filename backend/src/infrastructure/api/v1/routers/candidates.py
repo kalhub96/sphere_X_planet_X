@@ -62,6 +62,13 @@ async def get_candidate_sed(
 
     return {
         "candidate_id": candidate_id,
+        # These 102 points are generated from spectral templates plus random
+        # noise. They are NOT photometry measured from SPHEREx images.
+        "is_simulated": True,
+        "data_source": "template_model",
+        "note": (
+            "Illustrative template spectrum, not measured SPHEREx photometry."
+        ),
         "best_template": best_template,
         "reduced_chi2": round(reduced_chi2, 3),
         "bands": [

@@ -51,6 +51,10 @@ class CompareObservationsUC:
                 "band": band,
                 "wavelength_um": image_a.wavelength_um,
                 "n_candidates": len(candidates),
+                "is_simulated": bool(
+                    getattr(image_a, "is_simulated", False)
+                    or getattr(image_b, "is_simulated", False)
+                ),
                 "image_width": aligned_a.shape[1],
                 "image_height": aligned_a.shape[0],
                 "wcs": self._wcs_header(aligned_a),

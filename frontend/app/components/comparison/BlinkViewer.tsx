@@ -32,6 +32,7 @@ interface ViewerFrame {
   epochMjd?: number;
   wcs?: WCSHeader;
   flags?: EpochFrame['flags'];
+  isSimulated?: boolean;
 }
 
 interface BlinkViewerProps {
@@ -354,6 +355,14 @@ export default function BlinkViewer({
         {activeFrame?.flags && (
           <div className="absolute right-3 top-3 rounded border border-[var(--border-subtle)] bg-[#060810cc] px-2 py-1 text-[10px] font-mono text-[var(--text-secondary)]">
             Clean {activeFrame.flags.clean_pct.toFixed(1)}% · Flags {activeFrame.flags.bad_px}
+          </div>
+        )}
+        {(activeFrame?.isSimulated || displayFrame?.isSimulated) && (
+          <div
+            data-testid="simulated-frame-badge"
+            className="absolute bottom-3 right-3 rounded border border-amber-400 bg-amber-400/90 px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wide text-[#060810]"
+          >
+            Simulated · not SPHEREx data
           </div>
         )}
         {!ready && <div className="absolute inset-0 grid place-items-center text-xs font-mono text-[var(--text-secondary)]">Loading archive frames…</div>}

@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     irsa_most_url: str = "https://irsa.ipac.caltech.edu/cgi-bin/MOST/nph-most"
     spherex_collections: list[str] = ["spherex_dr1", "spherex_qr3"]
     log_level: str = "INFO"
+    # When the IRSA archive is slow or unreachable, the backend can fall back to
+    # a clearly labelled offline demo (simulated observations and images).
+    # Set ALLOW_SIMULATED_DATA=false to disable it and return an honest error
+    # instead; recommended for any scientific use.
+    allow_simulated_data: bool = True
     allowed_origins: Union[list[str], str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
     @field_validator("allowed_origins", mode="after")

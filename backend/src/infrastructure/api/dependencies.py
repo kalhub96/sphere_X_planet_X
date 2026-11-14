@@ -19,11 +19,19 @@ def get_cache() -> RedisCache:
 
 @lru_cache()
 def get_sia_adapter() -> IRSASIAAdapter:
-    return IRSASIAAdapter(settings.irsa_sia2_url, settings.database_url)
+    return IRSASIAAdapter(
+        settings.irsa_sia2_url,
+        settings.database_url,
+        allow_simulation=settings.allow_simulated_data,
+    )
 
 @lru_cache()
 def get_ibe_adapter() -> IRSAIBEAdapter:
-    return IRSAIBEAdapter(settings.database_url, cache=get_cache())
+    return IRSAIBEAdapter(
+        settings.database_url,
+        cache=get_cache(),
+        allow_simulation=settings.allow_simulated_data,
+    )
 
 @lru_cache()
 def get_processor() -> NumpyImageProcessor:

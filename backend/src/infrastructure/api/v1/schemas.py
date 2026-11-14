@@ -30,6 +30,8 @@ class ObservationResponse(BaseModel):
     obs_date: date
     ra: float
     dec: float
+    # True when the record came from the offline demo fallback, not IRSA.
+    is_simulated: bool = False
 
 class CrossMatchResponse(BaseModel):
     catalog: str
@@ -72,6 +74,7 @@ class EpochFrame(BaseModel):
     band_index: int | None = None
     detector_array: str | None = None
     wavelength_um: float | None = None
+    is_simulated: bool = False
 
 class EpochsResponse(BaseModel):
     ra: float
@@ -84,6 +87,11 @@ class EpochsResponse(BaseModel):
     difference_b64: str | None = None
     falsecolor_b64: str | None = None
     candidates: list[CandidateResponse] = Field(default_factory=list)
+    # "live"      = every frame came from the SPHEREx archive
+    # "mixed"     = some frames are real, some simulated
+    # "simulated" = every frame is simulated demo data (NOT SPHEREx data)
+    data_source: str = "live"
+    is_simulated: bool = False
 
 class EvidenceResponse(BaseModel):
     candidate_id: str
