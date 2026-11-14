@@ -5,11 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.infrastructure.config import settings
 from src.infrastructure.db.session import create_tables
 from src.infrastructure.api.v1.routers.observations import router as obs_router
+from src.infrastructure.api.v1.routers.epochs import router as epochs_router
 from src.infrastructure.api.v1.routers.compare import router as compare_router
 from src.infrastructure.api.v1.routers.candidates import router as candidates_router
 from src.infrastructure.api.v1.routers.wavelengths import router as wavelengths_router
-from src.infrastructure.api.v1.routers.planet_x import router as planet_x_router
-from src.infrastructure.api.v1.routers.planets import router as planets_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,13 +31,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 app.include_router(obs_router)
+app.include_router(epochs_router)
 app.include_router(compare_router)
 app.include_router(candidates_router)
 app.include_router(wavelengths_router)
-app.include_router(planet_x_router)
-app.include_router(planets_router)
 
 @app.get("/health")
 async def health():

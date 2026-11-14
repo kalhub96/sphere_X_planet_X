@@ -8,9 +8,11 @@ class Settings(BaseSettings):
 
     redis_url: str = "redis://localhost:6379"
     database_url: str = "sqlite+aiosqlite:///./data/skytrace.db"
-    irsa_sia2_url: str = "https://irsa.ipac.caltech.edu/ibe/sia2/spherex/qr3"
-    irsa_ibe_url: str = "https://irsa.ipac.caltech.edu/ibe/data/spherex/qr3"
-    irsa_most_url: str = "https://irsa.ipac.caltech.edu/applications/MOST"
+    # IRSA VO SIA2 official endpoint (supports both spherex_dr1 and spherex_qr3)
+    irsa_sia2_url: str = "https://irsa.ipac.caltech.edu/SIA"
+    irsa_ibe_url: str = "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1"
+    irsa_most_url: str = "https://irsa.ipac.caltech.edu/cgi-bin/MOST/nph-most"
+    spherex_collections: list[str] = ["spherex_dr1", "spherex_qr3"]
     log_level: str = "INFO"
     allowed_origins: Union[list[str], str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 

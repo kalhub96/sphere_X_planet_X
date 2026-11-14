@@ -5,6 +5,8 @@ from ..adapters.redis_cache import RedisCache
 from ..adapters.irsa_sia_adapter import IRSASIAAdapter
 from ..adapters.irsa_ibe_adapter import IRSAIBEAdapter
 from ..adapters.numpy_processor import NumpyImageProcessor
+from ..adapters.sqlite_candidate_repo import SQLiteCandidateRepository
+from ..adapters.irsa_most_adapter import IRSAMostAdapter
 from ...application.use_cases.query_sky_region import QuerySkyRegionUC
 from ...application.use_cases.compare_observations import CompareObservationsUC
 from ...application.use_cases.search_candidates import SearchCandidatesUC
@@ -17,15 +19,23 @@ def get_cache() -> RedisCache:
 
 @lru_cache()
 def get_sia_adapter() -> IRSASIAAdapter:
-    return IRSASIAAdapter(settings.irsa_sia2_url)
+    return IRSASIAAdapter(settings.irsa_sia2_url, settings.database_url)
 
 @lru_cache()
 def get_ibe_adapter() -> IRSAIBEAdapter:
-    return IRSAIBEAdapter(settings.irsa_ibe_url)
+    return IRSAIBEAdapter(settings.database_url, cache=get_cache())
 
 @lru_cache()
 def get_processor() -> NumpyImageProcessor:
     return NumpyImageProcessor()
+
+@lru_cache()
+def get_candidate_repo() -> SQLiteCandidateRepository:
+    return SQLiteCandidateRepository(settings.database_url)
+
+@lru_cache()
+def get_most_adapter() -> IRSAMostAdapter:
+    return IRSAMostAdapter(settings.irsa_most_url)
 
 def get_query_sky_region_uc(
     repo: IRSASIAAdapter = Depends(get_sia_adapter),
@@ -40,8 +50,13 @@ def get_compare_uc(
 ) -> CompareObservationsUC:
     return CompareObservationsUC(image_source=image_source, processor=processor, cache=cache)
 
-def get_search_candidates_uc() -> SearchCandidatesUC:
-    return SearchCandidatesUC(candidate_repo=None)
+def get_search_candidates_uc(
+    repo: SQLiteCandidateRepository = Depends(get_candidate_repo),
+) -> SearchCandidatesUC:
+    return SearchCandidatesUC(candidate_repo=repo)
 
-def get_evidence_uc() -> GenerateEvidenceUC:
-    return GenerateEvidenceUC(candidate_repo=None, solar_system=None, scorer=ConfidenceScorer())
+def get_evidence_uc(
+    repo: SQLiteCandidateRepository = Depends(get_candidate_repo),
+    most: IRSAMostAdapter = Depends(get_most_adapter),
+) -> GenerateEvidenceUC:
+    return GenerateEvidenceUC(candidate_repo=repo, solar_system=most, scorer=ConfidenceScorer())

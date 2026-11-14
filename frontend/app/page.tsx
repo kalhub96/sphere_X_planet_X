@@ -16,8 +16,7 @@ import {
   useTransform,
   type MotionValue,
 } from 'framer-motion';
-import CelestialSphere from './components/sky/CelestialSphere';
-import { Telescope, ArrowRight, Compass, Layers, Link2, ExternalLink, Search } from 'lucide-react';
+import { Telescope, ArrowRight, Layers, ExternalLink, Search, Sparkles } from 'lucide-react';
 
 /* ---------- config ---------- */
 // Update via env var when a new SPHEREx release lands; no code change needed.
@@ -39,7 +38,7 @@ const TARGETS = [
     color: 'var(--accent-cyan)',
     pos: { x: 68, y: 30 },
     description:
-      'A very cold, nearby brown dwarf with a large proper motion. It should visibly shift between SPHEREx epochs, which makes it a good first test for the blink view.',
+      'A very cold, nearby brown dwarf with a large proper motion. It visibly shifts between SPHEREx epochs, best revealed in Band/Detector 6 (4.42–5.00 µm).',
     metrics: [
       { label: 'Distance', value: '≈ 2.3 pc' },
       { label: 'Proper motion', value: '≈ 8″/yr' },
@@ -120,7 +119,7 @@ const TARGETS = [
 
 const STAT_BADGES = [
   { value: '102', label: 'Spectral Bands', sub: 'Near-infrared, 0.75 – 5.0 µm.' },
-  { value: '6', label: 'Detector Arrays', sub: 'Each array covers its own wavelength range.' },
+  { value: '6', label: 'Detector Arrays', sub: 'Each array covers its own wavelength range (D1–D6).' },
   { value: '6 mo', label: 'Full-Sky Cadence', sub: 'The whole sky is mapped every six months.' },
   { value: '6.2″', label: 'Pixel Scale', sub: 'Angular size of one SPHEREx pixel.' },
 ];
@@ -128,27 +127,27 @@ const STAT_BADGES = [
 const CAPABILITIES = [
   {
     n: '01',
-    title: '3D Celestial Explorer',
-    desc: 'Browse the sky on an interactive sphere and pick a patch to inspect.',
-    href: '/explore',
-    cta: 'Launch',
-    Icon: Compass,
-  },
-  {
-    n: '02',
-    title: 'Blink Viewer',
+    title: 'Multi-Epoch Video & Blink',
     desc: 'Step through images of one patch over time to spot objects that move or change brightness.',
     href: blinkUrl(133.7951, -7.2451, 300),
-    cta: 'Open',
+    cta: 'Open Viewer',
     Icon: Layers,
   },
   {
+    n: '02',
+    title: 'Image Subtraction & Dipoles',
+    desc: 'Instant pixel difference mapping revealing clean positive/negative dipole signatures of moving objects.',
+    href: '/compare?mode=difference',
+    cta: 'Explore Differences',
+    Icon: Sparkles,
+  },
+  {
     n: '03',
-    title: 'Shareable URLs',
-    desc: 'Every view is set by RA, Dec and field of view in the URL, so it can be linked or embedded.',
-    href: blinkUrl(269.452, 4.693, 300),
-    cta: 'Try',
-    Icon: Link2,
+    title: 'Detector Coaddition (D1–D6)',
+    desc: 'Separately coadd across SPHEREx detector arrays to boost signal-to-noise on faint infrared targets.',
+    href: '/compare?array=D6',
+    cta: 'View Coadds',
+    Icon: Telescope,
   },
 ];
 
@@ -356,8 +355,6 @@ export default function HomePage() {
     setNavHidden(latest > prev && latest > 120);
   });
 
-  const bgScale = useTransform(scrollYProgress, [0, 1], [1, 1.28]);
-
   const heroRef = useRef<HTMLElement>(null);
   const { scrollYProgress: heroP } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
   const heroY = useTransform(heroP, [0, 1], [0, 160]);
@@ -386,10 +383,11 @@ export default function HomePage() {
           className="fixed top-0 left-0 right-0 h-[3px] origin-left z-50 bg-gradient-to-r from-[var(--accent-cyan)] via-[var(--accent-gold)] to-[var(--accent-orange)]"
         />
 
-        <motion.div style={{ scale: bgScale }} className="fixed inset-0 z-0 pointer-events-auto opacity-70">
-          <CelestialSphere className="w-full h-full" />
-        </motion.div>
-        <div className="fixed inset-0 z-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(6,8,16,0.2)_0%,rgba(6,8,16,0.7)_65%,#060810_100%)]" />
+        {/* High-performance cosmic background */}
+        <div className="fixed inset-0 z-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-950 via-[#060810] to-[#030408]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(0,229,255,0.08),transparent_55%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_60%,rgba(255,107,53,0.05),transparent_50%)]" />
+        </div>
         <CursorGlow />
 
         <motion.header
@@ -412,10 +410,10 @@ export default function HomePage() {
             </nav>
 
             <Link
-              href="/explore"
+              href="/compare"
               className="px-4 py-2 rounded-lg bg-[var(--accent-cyan)] text-[#060810] text-sm font-bold hover:shadow-[0_0_16px_rgba(0,229,255,0.5)] transition-all flex items-center gap-1.5"
             >
-              Launch Explorer <ArrowRight className="w-4 h-4" />
+              Start Investigating <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </motion.header>
@@ -457,10 +455,10 @@ export default function HomePage() {
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-4">
                   <Magnetic>
                     <Link
-                      href="/explore"
+                      href="/compare"
                       className="px-6 py-3.5 rounded-xl bg-[var(--accent-cyan)] text-[#060810] font-bold text-sm hover:shadow-[0_0_24px_rgba(0,229,255,0.6)] transition-all flex items-center gap-2"
                     >
-                      <Compass className="w-4 h-4" /> Browse the sky
+                      <Layers className="w-4 h-4" /> Open Investigation Viewer
                     </Link>
                   </Magnetic>
                   <Magnetic>
@@ -468,7 +466,7 @@ export default function HomePage() {
                       href="#targets"
                       className={`px-6 py-3.5 rounded-xl text-sm font-semibold flex items-center gap-2 bg-[rgba(13,18,32,0.85)] hover:border-[var(--border-hover)] ${PANEL}`}
                     >
-                      <Layers className="w-4 h-4 text-[var(--accent-orange)]" /> Try an example
+                      <Sparkles className="w-4 h-4 text-[var(--accent-orange)]" /> Try an example
                     </a>
                   </Magnetic>
                 </div>
@@ -478,25 +476,30 @@ export default function HomePage() {
 
           {/* HOW IT WORKS + STATS */}
           <section id="how" className="max-w-6xl mx-auto px-5 py-28 scroll-mt-20">
-            <h2 className="mt-4 mb-8 text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
-              <SplitWords text="Find discoveries by" />{' '}
-              <SplitWords text="comparing images over time." wordClass={GRAD} delay={0.3} />
-            </h2>
+            <Reveal>
+              <div className={`text-[var(--accent-cyan)] mb-3 ${LABEL}`}>How it works</div>
+              <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-6">
+                Turn astronomical data into motion you can see.
+              </h2>
+            </Reveal>
 
-            <ScrollFillText text={MANIFESTO} className="max-w-4xl text-2xl sm:text-4xl font-semibold leading-snug tracking-tight text-[var(--text-primary)]" />
+            <ScrollFillText
+              text={MANIFESTO}
+              className="text-xl sm:text-3xl font-medium leading-relaxed text-[var(--text-primary)] my-12"
+            />
 
-            <div className={`mt-14 grid grid-cols-2 lg:grid-cols-4 ${PANEL} overflow-hidden`}>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-16">
               {STAT_BADGES.map((s, i) => (
                 <motion.div
                   key={s.label}
-                  initial={{ opacity: 0, y: 40 }}
+                  initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '-60px' }}
-                  transition={{ duration: 0.8, ease: EASE, delay: i * 0.12 }}
-                  className={`p-6 border-[var(--border-subtle)] ${i % 2 === 0 ? 'border-r' : ''} ${i < 2 ? 'border-b lg:border-b-0' : ''} ${i < 3 ? 'lg:border-r' : 'lg:border-r-0'}`}
+                  transition={{ duration: 0.7, ease: EASE, delay: i * 0.1 }}
+                  className={`p-6 rounded-2xl ${PANEL}`}
                 >
-                  <CountUp value={s.value} className={`text-4xl font-extrabold font-mono ${GRAD}`} />
-                  <div className={`mt-3 mb-1 text-[var(--accent-cyan)] ${LABEL}`}>{s.label}</div>
+                  <CountUp value={s.value} className={`text-3xl sm:text-4xl font-extrabold mb-1 ${GRAD}`} />
+                  <div className="text-sm font-bold text-[var(--text-primary)] mb-1">{s.label}</div>
                   <p className="text-sm text-[var(--text-secondary)] leading-snug">{s.sub}</p>
                 </motion.div>
               ))}
@@ -671,10 +674,10 @@ export default function HomePage() {
                 <div className="flex flex-wrap justify-center gap-4">
                   <Magnetic>
                     <Link
-                      href="/explore"
+                      href="/compare"
                       className="inline-block px-6 py-3.5 rounded-xl bg-[var(--accent-cyan)] text-[#060810] font-bold text-sm hover:shadow-[0_0_24px_rgba(0,229,255,0.6)] transition-all"
                     >
-                      Launch 3D Explorer
+                      Start Investigating
                     </Link>
                   </Magnetic>
                   <Magnetic>
@@ -696,8 +699,7 @@ export default function HomePage() {
             SkyTrace · NASA Space Apps Challenge 2026 · <span className="text-[var(--accent-cyan)]">SPHEREx {RELEASE} release</span>
           </span>
           <span className="flex items-center gap-5">
-            <Link href="/explore" className="hover:text-white transition-colors">3D Explorer</Link>
-            <Link href="/compare" className="hover:text-white transition-colors">Blink Viewer</Link>
+            <Link href="/compare" className="hover:text-white transition-colors">Compare Viewer</Link>
             <a
               href="https://irsa.ipac.caltech.edu/Missions/spherex.html"
               target="_blank"

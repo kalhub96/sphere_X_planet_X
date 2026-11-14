@@ -7,22 +7,32 @@ class QuerySkyRegionUC:
         self._repo = obs_repo
         self._cache = cache
 
-    async def execute(self, ra: float, dec: float, radius_deg: float, band: int | None = None) -> list[Observation]:
-        key_data = f"{ra:.6f}:{dec:.6f}:{radius_deg:.4f}:{band}"
+    async def execute(
+        self,
+        ra: float,
+        dec: float,
+        radius_deg: float,
+        band: int | None = None,
+        array: str | None = None,
+    ) -> list[Observation]:
+        key_data = f"{ra:.6f}:{dec:.6f}:{radius_deg:.4f}:{band}:{array}"
         cache_key = "obs_meta:" + hashlib.sha256(key_data.encode()).hexdigest()[:16]
 
         cached = await self._cache.get(cache_key)
         if cached:
             from datetime import date
             obs_list = []
-            for o in cached["observations"]:
+            for o in cached.get("observations", []):
                 d = dict(o)
                 if isinstance(d.get("obs_date"), str):
-                    d["obs_date"] = date.fromisoformat(d["obs_date"])
+                    try:
+                        d["obs_date"] = date.fromisoformat(d["obs_date"])
+                    except Exception:
+                        d["obs_date"] = None
                 obs_list.append(Observation(**d))
             return obs_list
 
-        observations = await self._repo.search(ra, dec, radius_deg, band)
+        observations = await self._repo.search(ra, dec, radius_deg, band=band, array=array)
         
         # serialize to cache
         cacheable = []

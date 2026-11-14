@@ -19,7 +19,11 @@ class CompareObservationsUC:
 
         aligned_a, aligned_b = await self._proc.align(image_a, image_b)
         difference, snr_map = await self._proc.subtract(aligned_a, aligned_b)
-        candidates = await self._proc.detect_sources(snr_map, sigma_threshold=4.5)
+        candidates = await self._proc.detect_sources(
+            snr_map,
+            wcs=aligned_a.wcs,
+            sigma_threshold=4.5,
+        )
 
         # Populate coordinates for candidates using WCS
         for c in candidates:
@@ -30,8 +34,8 @@ class CompareObservationsUC:
             except Exception:
                 pass
 
-        tile_a = await self._proc.render_tile(aligned_a, scaling="zscale")
-        tile_b = await self._proc.render_tile(aligned_b, scaling="zscale")
+        tile_a = await self._proc.render_tile(aligned_a, stretch="asinh")
+        tile_b = await self._proc.render_tile(aligned_b, stretch="asinh")
         tile_diff = await self._proc.render_diff_tile(snr_map, colormap="diverging")
 
         result = ComparisonResult(
@@ -49,6 +53,7 @@ class CompareObservationsUC:
                 "n_candidates": len(candidates),
                 "image_width": aligned_a.shape[1],
                 "image_height": aligned_a.shape[0],
+                "wcs": self._wcs_header(aligned_a),
             },
             tile_a_b64=tile_a,
             tile_b_b64=tile_b,
@@ -57,3 +62,24 @@ class CompareObservationsUC:
 
         await self._cache.set(cache_key, result.to_dict(), ttl=43200)
         return result
+
+    @staticmethod
+    def _wcs_header(image) -> dict[str, float]:
+        header = image.wcs.to_header(relax=True)
+        cdelt1 = float(header.get("CDELT1", 0.0))
+        cdelt2 = float(header.get("CDELT2", 0.0))
+        cd1_1 = float(header.get("CD1_1", cdelt1))
+        cd1_2 = float(header.get("CD1_2", 0.0))
+        cd2_1 = float(header.get("CD2_1", 0.0))
+        cd2_2 = float(header.get("CD2_2", cdelt2))
+        return {
+            "crpix1": float(header.get("CRPIX1")),
+            "crpix2": float(header.get("CRPIX2")),
+            "crval1": float(header.get("CRVAL1")),
+            "crval2": float(header.get("CRVAL2")),
+            "cd1_1": cd1_1,
+            "cd1_2": cd1_2,
+            "cd2_1": cd2_1,
+            "cd2_2": cd2_2,
+            "pixel_scale_arcsec": abs(cd1_1 or cdelt1) * 3600.0,
+        }
