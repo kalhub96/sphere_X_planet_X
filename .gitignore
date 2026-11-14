@@ -56,3 +56,5 @@ backend/.venv/
 # Build caches
 .next/
 backend/.venv
+__pycache__/
+*.pyc
