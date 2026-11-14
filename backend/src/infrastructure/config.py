@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./data/skytrace.db"
     irsa_sia2_url: str = "https://irsa.ipac.caltech.edu/ibe/sia2/spherex/qr3"
     irsa_ibe_url: str = "https://irsa.ipac.caltech.edu/ibe/data/spherex/qr3"
+    # Time-lapse endpoint: IRSA SIA2 service + SPHEREx collection (change this to pick up new data releases)
+    irsa_timelapse_sia_url: str = "https://irsa.ipac.caltech.edu/SIA"
+    irsa_spherex_collection: str = "spherex_qr2"
+    allow_synthetic_fallback: bool = True
     irsa_most_url: str = "https://irsa.ipac.caltech.edu/applications/MOST"
     log_level: str = "INFO"
     allowed_origins: Union[list[str], str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
