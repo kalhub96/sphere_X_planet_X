@@ -18,6 +18,7 @@ import {
   type MotionValue,
 } from 'framer-motion';
 import CelestialSphere from './components/sky/CelestialSphere';
+
 import { Telescope, ArrowRight, Compass, Layers, LineChart, ExternalLink } from 'lucide-react';
 
 /* ---------- data (unchanged from your current page) ---------- */
