@@ -1,22 +1,75 @@
 export interface Observation {
   id: string;
-  ra_deg: number;
-  dec_deg: number;
+  ra: number;
+  dec: number;
+  ra_deg?: number;
+  dec_deg?: number;
   band_index: number;
   wavelength_um: number;
   obs_date: string;
-  mjd?: number;
-  exposure_s: number;
+  epoch_mjd: number;
   quality_pct: number;
   fits_url: string;
-  preview_url: string;
+  /** True when the record came from the backend's offline demo fallback, not IRSA. */
+  is_simulated?: boolean;
 }
 
 export interface WavelengthBand {
-  band_index: number;
+  index: number;
   wavelength_um: number;
-  resolution_r: number;
-  description: string;
+  label: string;
+  detector: string;
+}
+
+export interface WCSHeader {
+  crpix1: number;
+  crpix2: number;
+  crval1: number;
+  crval2: number;
+  cd1_1: number;
+  cd1_2: number;
+  cd2_1: number;
+  cd2_2: number;
+  pixel_scale_arcsec: number;
+}
+
+export interface FlagSummary {
+  clean_pct: number;
+  cosmic_ray_px: number;
+  saturated_px: number;
+  bad_px: number;
+}
+
+export interface EpochFrame {
+  epoch_index: number;
+  epoch_mjd: number;
+  obs_date: string;
+  image_b64: string;
+  wcs: WCSHeader;
+  flags: FlagSummary;
+  band_index: number | null;
+  detector_array: string | null;
+  wavelength_um: number | null;
+  /** True when this frame's pixels are simulated demo data, not SPHEREx data. */
+  is_simulated?: boolean;
+}
+
+export type DataSource = 'live' | 'mixed' | 'simulated';
+
+export interface EpochsResult {
+  ra: number;
+  dec: number;
+  fov: number;
+  detector_array: string | null;
+  band_index: number | null;
+  stretch: string;
+  epochs: EpochFrame[];
+  difference_b64: string | null;
+  falsecolor_b64: string | null;
+  candidates?: Candidate[];
+  /** "live" = all frames from the SPHEREx archive; "mixed"/"simulated" = demo data involved. */
+  data_source?: DataSource;
+  is_simulated?: boolean;
 }
 
 export interface Candidate {
@@ -24,6 +77,8 @@ export interface Candidate {
   comparison_id: string;
   ra_deg: number;
   dec_deg: number;
+  ra?: number;
+  dec?: number;
   pixel_x: number;
   pixel_y: number;
   confidence_score: number;
@@ -53,39 +108,56 @@ export interface ComparisonResult {
   image_a_b64: string;
   image_b_b64: string;
   difference_b64: string;
-  false_color_b64?: string;
+  falsecolor_b64?: string;
+  wcs: WCSHeader;
   candidates: Candidate[];
-  alignment_rms_arcsec: number;
-  flux_scale_factor: number;
+  metadata?: { is_simulated?: boolean; [key: string]: unknown };
 }
 
-export interface EvidenceMeasurement {
-  label: string;
-  value: number | string;
-  unit: string;
-  uncertainty?: number;
+export interface PhotometryPoint {
+  band_index: number;
+  wavelength_um: number;
+  flux_ujy: number;
+  flux_err_ujy: number;
 }
 
-export interface EvidenceLink {
-  label: string;
-  url: string;
-  description: string;
+export interface ModelFit {
+  template_name: string;
+  chi2: number;
+  temperature_k?: number;
+  reduced_chi2: number;
+  model_fluxes: number[];
+}
+
+export interface SEDData {
+  photometry: PhotometryPoint[];
+  best_fit: ModelFit;
+  alternative_fits: ModelFit[];
+}
+
+export interface CrossMatch {
+  catalog: string;
+  source_id: string;
+  angular_dist_arcsec: number;
+  proper_motion_mas_yr?: number;
+  known_solar_system: boolean;
 }
 
 export interface Evidence {
   candidate_id: string;
-  narrative: string;
+  classification: string;
   confidence_score: number;
-  measurements: EvidenceMeasurement[];
-  caveats: string[];
-  irsa_links: EvidenceLink[];
-  quality_flags: Record<string, boolean>;
-}
-
-export interface SkyPreset {
-  name: string;
-  ra: number;
-  dec: number;
-  description: string;
-  category: 'Nebula' | 'Star Cluster' | 'Galactic' | 'Deep Survey' | 'Calibration';
+  sed?: SEDData;
+  cross_matches?: CrossMatch[];
+  quality_flags?: {
+    clean_pct: number;
+    cosmic_ray_px: number;
+    saturated_px: number;
+    bad_px: number;
+  };
+  solar_system_alert?: boolean;
+  notes?: string[];
+  narrative?: string;
+  measurements?: any[];
+  irsa_links?: string[];
 }

@@ -1,43 +1,402 @@
-import hashlib
+"""IRSA VO SIA2 adapter querying both spherex_dr1 and spherex_qr3 collections."""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from collections.abc import Mapping
 from datetime import date, timedelta
-from ...domain.entities.observation import Observation
+from typing import Any, Final
+
+import httpx
+from sqlalchemy import select
+
+from ...domain.entities.observation import Observation, is_simulated_obs_id
+from ...domain.exceptions import IRSAError
+from ..db.models import ObservationModel
+from ..db.session import create_tables, get_session_factory
+
+logger = logging.getLogger(__name__)
+
+SPHEREX_WAVELENGTHS: Final[list[float]] = [
+    round(0.75 * ((5.0 / 0.75) ** (i / 101.0)), 4) for i in range(102)
+]
+
+DETECTOR_ARRAY_BANDS: Final[dict[str, list[int]]] = {
+    "D1": list(range(0, 17)),
+    "D2": list(range(17, 34)),
+    "D3": list(range(34, 51)),
+    "D4": list(range(51, 68)),
+    "D5": list(range(68, 85)),
+    "D6": list(range(85, 102)),
+}
+
+
+def detector_for_band(band_index: int) -> str:
+    for detector, bands in DETECTOR_ARRAY_BANDS.items():
+        if band_index in bands:
+            return detector
+    return "D1"
+
+
+def band_for_wavelength_um(wavelength_um: float) -> int:
+    return min(
+        range(len(SPHEREX_WAVELENGTHS)),
+        key=lambda i: abs(SPHEREX_WAVELENGTHS[i] - wavelength_um),
+    )
+
+
+def make_cutout_url(base_url: str, ra: float, dec: float, fov_deg: float) -> str:
+    separator = "&" if "?" in base_url else "?"
+    return f"{base_url}{separator}center={ra:.5f},{dec:.5f}d&size={fov_deg:.4f}"
+
 
 class IRSASIAAdapter:
-    def __init__(self, sia2_url: str) -> None:
+    """Query IRSA SIA2 across both SPHEREx wide-survey collections."""
+
+    def __init__(
+        self,
+        sia2_url: str = "https://irsa.ipac.caltech.edu/SIA",
+        database_url: str = "sqlite+aiosqlite:///./data/skytrace.db",
+        timeout: float = 3.5,
+        collections: tuple[str, str] = ("spherex_dr1", "spherex_qr3"),
+        allow_simulation: bool = True,
+    ) -> None:
+        self._allow_simulation = allow_simulation
         self._url = sia2_url
+        self._database_url = database_url
+        self._timeout = timeout
+        self._collections = collections
+        self._cache: dict[str, list[Observation]] = {}
+        self._mem_obs: dict[str, Observation] = {}
 
-    async def search(self, ra: float, dec: float, radius_deg: float, band: int | None = None) -> list[Observation]:
-        # Generate multi-epoch SPHEREx QR3 observations
-        # SPHEREx surveys the entire sky every 6 months across 102 spectroscopic bands
-        base_wavelengths = [0.75 * ((5.0 / 0.75) ** (i / 101.0)) for i in range(102)]
-        
-        target_bands = [band] if band is not None else [12, 34, 56, 78, 100]
-        epochs = [
-            (60400.0, date(2025, 4, 15)),   # Epoch 1 (Survey Pass 1)
-            (60582.0, date(2025, 10, 14)),  # Epoch 2 (Survey Pass 2, 6 months later)
-            (60765.0, date(2026, 4, 15)),   # Epoch 3 (Survey Pass 3, 1 year later)
-        ]
+    async def search(
+        self,
+        ra: float,
+        dec: float,
+        radius_deg: float,
+        band: int | None = None,
+        array: str | None = None,
+    ) -> list[Observation]:
+        if not (0.0 <= ra <= 360.0 and -90.0 <= dec <= 90.0):
+            raise ValueError(f"Invalid celestial coordinates: ra={ra}, dec={dec}")
+        if radius_deg <= 0.0 or radius_deg > 5.0:
+            raise ValueError(f"Radius must be in range (0.0, 5.0], got {radius_deg}")
+        if band is not None and not (0 <= band < len(SPHEREX_WAVELENGTHS)):
+            raise ValueError(f"Band index must be in range [0, 101], got {band}")
+        if array is not None and array not in DETECTOR_ARRAY_BANDS:
+            raise ValueError("array must be one of D1, D2, D3, D4, D5, D6")
 
-        observations = []
-        for epoch_idx, (mjd, dt) in enumerate(epochs):
-            for b_idx in target_bands:
-                obs_id = f"spherex_qr3_{ra:.4f}_{dec:.4f}_ep{epoch_idx+1}_b{b_idx}"
-                obs = Observation(
-                    id=obs_id,
-                    region_id=f"{ra:.4f}_{dec:.4f}",
-                    epoch_mjd=mjd,
-                    band_index=b_idx,
-                    wavelength_um=round(base_wavelengths[b_idx], 4),
-                    fits_url=f"https://irsa.ipac.caltech.edu/ibe/data/spherex/qr3/fits?ra={ra}&dec={dec}&band={b_idx}&epoch={epoch_idx+1}",
-                    quality_pct=96.5,
-                    data_release="qr3",
-                    obs_date=dt,
-                    ra=ra,
-                    dec=dec,
+        cache_key = f"{ra:.4f}_{dec:.4f}_{radius_deg:.4f}_{band}_{array}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+
+        rows: list[tuple[str, Mapping[str, Any]]] = []
+        errors: list[Exception] = []
+
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout, follow_redirects=True) as client:
+                results = await asyncio.gather(
+                    *(
+                        self._fetch_collection(client, collection, ra, dec, radius_deg)
+                        for collection in self._collections
+                    ),
+                    return_exceptions=True,
                 )
-                observations.append(obs)
+            for collection, result in zip(self._collections, results, strict=True):
+                if isinstance(result, Exception):
+                    errors.append(result)
+                    logger.warning("SIA query failed for %s: %s", collection, result)
+                    continue
+                rows.extend((collection, row) for row in result)
+        except Exception as e:
+            errors.append(e)
 
+        observations: list[Observation] = []
+        for collection, row in rows:
+            observation = self._to_observation(
+                row=row,
+                collection=collection,
+                ra=ra,
+                dec=dec,
+                fov_deg=radius_deg * 2.0,
+                requested_band=band,
+            )
+            if observation is None:
+                continue
+            if band is not None and observation.band_index != band:
+                continue
+            if array is not None and detector_for_band(observation.band_index) != array:
+                continue
+            observations.append(observation)
+
+        # Offline demo fallback: only when the live archive returned fewer than
+        # 2 observations AND simulation is enabled. Every record produced here
+        # is flagged ``is_simulated=True`` so the API and UI can label it.
+        if len(observations) < 2 and not self._allow_simulation:
+            if errors and not observations:
+                raise IRSAError(
+                    "SPHEREx archive (IRSA) could not be reached and simulated "
+                    "data is disabled (ALLOW_SIMULATED_DATA=false)."
+                ) from errors[0]
+        elif len(observations) < 2:
+            logger.warning(
+                "IRSA returned %d observation(s) for ra=%.4f dec=%.4f; "
+                "adding SIMULATED demo epochs.",
+                len(observations),
+                ra,
+                dec,
+            )
+            epochs = [
+                (60430.0, date(2025, 5, 15), "dr1", 1),
+                (60613.0, date(2025, 11, 14), "dr1", 2),
+                (60796.0, date(2026, 5, 16), "qr3", 3),
+            ]
+            target_bands = (
+                DETECTOR_ARRAY_BANDS[array]
+                if array and array in DETECTOR_ARRAY_BANDS
+                else ([band] if band is not None else [10, 26, 43, 60, 77, 94])
+            )
+            for mjd, dt, release, pass_num in epochs:
+                for b_idx in target_bands:
+                    wl = SPHEREX_WAVELENGTHS[b_idx]
+                    obs_id = f"spherex_{release}_{ra:.4f}_{dec:.4f}_pass{pass_num}_b{b_idx}"
+                    fits_url = f"https://irsa.ipac.caltech.edu/ibe/data/spherex/{release}?center={ra:.5f},{dec:.5f}d&size={radius_deg*2:.4f}&band={b_idx}&pass={pass_num}"
+                    obs = Observation(
+                        id=obs_id,
+                        region_id=f"{ra:.4f}_{dec:.4f}",
+                        epoch_mjd=mjd,
+                        band_index=b_idx,
+                        wavelength_um=wl,
+                        fits_url=fits_url,
+                        quality_pct=98.0,
+                        data_release=release,
+                        obs_date=dt,
+                        ra=ra,
+                        dec=dec,
+                        is_simulated=True,
+                    )
+                    observations.append(obs)
+
+        observations.sort(
+            key=lambda observation: (
+                observation.epoch_mjd,
+                observation.band_index,
+                observation.id,
+            )
+        )
+        self._cache[cache_key] = observations
+        for obs in observations:
+            self._mem_obs[obs.id] = obs
+        await asyncio.gather(*(self._save_to_db(observation) for observation in observations))
         return observations
 
+    async def _fetch_collection(
+        self,
+        client: httpx.AsyncClient,
+        collection: str,
+        ra: float,
+        dec: float,
+        radius_deg: float,
+    ) -> list[Mapping[str, Any]]:
+        params = {
+            "COLLECTION": collection,
+            "POS": f"CIRCLE {ra:.6f} {dec:.6f} {radius_deg:.6f}",
+            "RESPONSEFORMAT": "JSON",
+        }
+        transient_statuses = {502, 503, 504}
+        last_error: Exception | None = None
+        for attempt in range(2):
+            try:
+                response = await client.get(self._url, params=params)
+                if response.status_code in transient_statuses:
+                    last_error = IRSAError(f"IRSA SIA2 returned HTTP {response.status_code}")
+                    if attempt < 1:
+                        await asyncio.sleep(0.2 * (2**attempt))
+                        continue
+                response.raise_for_status()
+                return self._extract_rows(response.json())
+            except (httpx.HTTPError, ValueError) as error:
+                last_error = error
+                if attempt < 1:
+                    await asyncio.sleep(0.2 * (2**attempt))
+        raise IRSAError(f"SIA2 query failed for {collection}") from last_error
+
+    @staticmethod
+    def _extract_rows(payload: Any) -> list[Mapping[str, Any]]:
+        """Support the two JSON shapes produced by IRSA's VO response layer."""
+        if not isinstance(payload, Mapping):
+            return []
+
+        data = payload.get("data")
+        if isinstance(data, list) and all(isinstance(row, Mapping) for row in data):
+            return list(data)
+
+        votable = payload.get("VOTABLE", payload)
+        resources = votable.get("RESOURCE_ARRAY", []) if isinstance(votable, Mapping) else []
+        rows: list[Mapping[str, Any]] = []
+        for resource in resources if isinstance(resources, list) else []:
+            table = resource.get("TABLE", {}) if isinstance(resource, Mapping) else {}
+            fields = table.get("FIELD", []) if isinstance(table, Mapping) else []
+            field_names = [
+                field.get("@name") or field.get("name")
+                for field in fields
+                if isinstance(field, Mapping)
+            ]
+            data_elem = table.get("DATA", {}) if isinstance(table, Mapping) else {}
+            table_data = data_elem.get("TABLEDATA", []) if isinstance(data_elem, Mapping) else []
+            for row in table_data if isinstance(table_data, list) else []:
+                if isinstance(row, list) and len(row) == len(field_names):
+                    rows.append(dict(zip(field_names, row, strict=True)))
+        return rows
+
+    def _to_observation(
+        self,
+        row: Mapping[str, Any],
+        collection: str,
+        ra: float,
+        dec: float,
+        fov_deg: float,
+        requested_band: int | None,
+    ) -> Observation | None:
+        access_url = str(row.get("access_url") or "").strip()
+        if not access_url:
+            return None
+
+        obs_id = str(row.get("obs_id") or "").strip()
+        if not obs_id:
+            obs_id = f"spherex_{collection}_{ra:.4f}_{dec:.4f}"
+
+        epoch_mjd = self._parse_epoch_mjd(row)
+        wavelength_um = self._parse_wavelength_um(row, requested_band)
+        band_index = (
+            requested_band
+            if requested_band is not None
+            else band_for_wavelength_um(wavelength_um)
+        )
+        cutout_url = make_cutout_url(access_url, ra=ra, dec=dec, fov_deg=fov_deg)
+
+        obs_date_value = row.get("obs_date")
+        if isinstance(obs_date_value, str) and obs_date_value.strip():
+            try:
+                obs_date = date.fromisoformat(obs_date_value.strip()[:10])
+            except ValueError:
+                obs_date = self._mjd_to_date(epoch_mjd)
+        else:
+            obs_date = self._mjd_to_date(epoch_mjd)
+
+        return Observation(
+            id=obs_id,
+            region_id=f"{ra:.4f}_{dec:.4f}",
+            epoch_mjd=epoch_mjd,
+            band_index=band_index,
+            wavelength_um=wavelength_um,
+            fits_url=cutout_url,
+            quality_pct=float(row.get("quality_pct", 98.0)),
+            data_release=collection.removeprefix("spherex_"),
+            obs_date=obs_date,
+            ra=float(row.get("s_ra", ra)),
+            dec=float(row.get("s_dec", dec)),
+        )
+
+    @staticmethod
+    def _parse_epoch_mjd(row: Mapping[str, Any]) -> float:
+        for key in ("t_min", "t_max", "mjd-obs", "mjd_obs", "time"):
+            value = row.get(key)
+            if value is None:
+                continue
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                continue
+        return 60430.0
+
+    @staticmethod
+    def _parse_wavelength_um(row: Mapping[str, Any], requested_band: int | None) -> float:
+        for key in ("em_min", "em_max", "wavelength_um", "wavelength"):
+            value = row.get(key)
+            if value is None:
+                continue
+            try:
+                numeric = float(value)
+                return numeric * 1e6 if numeric < 0.1 else numeric
+            except (TypeError, ValueError):
+                continue
+        if requested_band is not None and 0 <= requested_band < len(SPHEREX_WAVELENGTHS):
+            return SPHEREX_WAVELENGTHS[requested_band]
+        return 2.5
+
+    @staticmethod
+    def _mjd_to_date(epoch_mjd: float) -> date:
+        return date(2025, 5, 1) + timedelta(days=max(0, int(epoch_mjd - 60400.0)))
+
     async def get_by_id(self, obs_id: str) -> Observation | None:
+        if obs_id in self._mem_obs:
+            return self._mem_obs[obs_id]
+        try:
+            factory = get_session_factory()
+            if factory is None:
+                await create_tables(self._database_url)
+                factory = get_session_factory()
+            if factory:
+                async with factory() as session:
+                    row = (
+                        await session.execute(
+                            select(ObservationModel).where(ObservationModel.id == obs_id)
+                        )
+                    ).scalar_one_or_none()
+                    if row:
+                        return Observation(
+                            id=row.id,
+                            region_id=row.region_id,
+                            epoch_mjd=row.epoch_mjd,
+                            band_index=row.band_index,
+                            wavelength_um=row.wavelength_um,
+                            fits_url=row.fits_url,
+                            quality_pct=row.quality_pct,
+                            data_release=row.data_release,
+                            obs_date=row.obs_date,
+                            ra=row.ra,
+                            dec=row.dec,
+                            is_simulated=is_simulated_obs_id(row.id),
+                        )
+        except Exception:
+            pass
         return None
+
+    async def _save_to_db(self, obs: Observation) -> None:
+        # Never persist fabricated records: they would look like archive data
+        # the next time they are read back.
+        if obs.is_simulated:
+            return
+        try:
+            factory = get_session_factory()
+            if factory is None:
+                await create_tables(self._database_url)
+                factory = get_session_factory()
+            if factory:
+                async with factory() as session:
+                    existing = (
+                        await session.execute(
+                            select(ObservationModel).where(ObservationModel.id == obs.id)
+                        )
+                    ).scalar_one_or_none()
+                    if existing is None:
+                        session.add(
+                            ObservationModel(
+                                id=obs.id,
+                                region_id=obs.region_id,
+                                epoch_mjd=obs.epoch_mjd,
+                                band_index=obs.band_index,
+                                wavelength_um=obs.wavelength_um,
+                                fits_url=obs.fits_url,
+                                quality_pct=obs.quality_pct,
+                                data_release=obs.data_release,
+                                obs_date=obs.obs_date,
+                                ra=obs.ra,
+                                dec=obs.dec,
+                            )
+                        )
+                        await session.commit()
+        except Exception:
+            pass
