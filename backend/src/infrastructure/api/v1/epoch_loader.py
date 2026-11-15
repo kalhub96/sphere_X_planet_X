@@ -14,6 +14,13 @@ from src.domain.exceptions import IRSAError, NoDataError
 MAX_EXPOSURES_PER_STACK = 5
 
 
+async def _fetch_cutout(ibe, obs_id: str, band: int, fits_url: str | None = None) -> FITSImage:
+    try:
+        return await ibe.fetch(obs_id, band=band, fits_url=fits_url)
+    except TypeError:
+        return await ibe.fetch(obs_id, band=band)
+
+
 async def fetch_stack(ibe, processor, observations: Sequence[Observation]) -> FITSImage:
     """Download the given exposures and median-stack them into one image.
 
@@ -22,7 +29,10 @@ async def fetch_stack(ibe, processor, observations: Sequence[Observation]) -> FI
     """
     chosen = list(observations)[:MAX_EXPOSURES_PER_STACK]
     results = await asyncio.gather(
-        *(ibe.fetch(o.id, band=o.band_index) for o in chosen),
+        *(
+            _fetch_cutout(ibe, o.id, band=o.band_index, fits_url=getattr(o, "fits_url", None))
+            for o in chosen
+        ),
         return_exceptions=True,
     )
     images = [r for r in results if isinstance(r, FITSImage)]
@@ -46,7 +56,12 @@ async def load_epoch_image(
     if array:
         return await fetch_stack(ibe, processor, cluster)
     target = cluster[0]
-    return await ibe.fetch(target.id, band=band if band is not None else target.band_index)
+    return await _fetch_cutout(
+        ibe,
+        target.id,
+        band=band if band is not None else target.band_index,
+        fits_url=getattr(target, "fits_url", None),
+    )
 
 
 def parse_epoch_list(value: str | None) -> list[int]:

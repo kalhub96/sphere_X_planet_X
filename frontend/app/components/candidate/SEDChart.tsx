@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import ChartJS from 'chart.js/auto';
-import type { ChartData, ChartOptions } from 'chart.js';
+import type { ChartOptions } from 'chart.js';
 import {
   SPHEREX_WAVELENGTHS,
   SPECTRAL_TEMPLATES,
@@ -10,11 +10,15 @@ import {
   generateSyntheticCandidateSED,
   FitResult,
 } from '../../lib/spectralTemplates';
+import { useCandidateSED } from '../../hooks/useObservations';
 import { useSkyStore } from '../../store/skyStore';
-import { Activity, Sparkles, CheckCircle2, Sliders } from 'lucide-react';
+import { Activity, CheckCircle2, Loader2, Sliders } from 'lucide-react';
 
 interface SEDChartProps {
   candidateId?: string;
+  ra?: number;
+  dec?: number;
+  simulate?: boolean;
   measuredFluxes?: number[];
   uncertainties?: number[];
   className?: string;
@@ -22,13 +26,23 @@ interface SEDChartProps {
 
 export default function SEDChart({
   candidateId,
+  ra,
+  dec,
+  simulate = false,
   measuredFluxes: inputFluxes,
   uncertainties: inputUncertainties,
   className = '',
 }: SEDChartProps) {
   const chartCanvasRef = useRef<HTMLCanvasElement>(null);
-  const chartInstanceRef = useRef<any>(null);
+  const chartInstanceRef = useRef<ChartJS<'line'> | null>(null);
   const { selectedBand, setSelectedBand } = useSkyStore();
+
+  const sedQuery = useCandidateSED(
+    inputFluxes && inputFluxes.length === 102 ? null : (candidateId ?? 'active_patch'),
+    ra,
+    dec,
+    simulate
+  );
 
   // Active template visibility filters
   const [visibleTemplates, setVisibleTemplates] = useState<Record<string, boolean>>({
@@ -38,17 +52,38 @@ export default function SEDChart({
     'Comet / Active Centaur': true,
   });
 
-  // Measured fluxes & errors (fallback to realistic synthetic SED if not provided)
-  const { measuredFluxes, uncertainties } = useMemo(() => {
+  // Measured fluxes & errors (from props, backend FITS photometry, or fallback template)
+  const { measuredFluxes, uncertainties, measuredFlags, dataSource, measuredCount } = useMemo(() => {
     if (inputFluxes && inputFluxes.length === 102) {
       return {
         measuredFluxes: inputFluxes,
         uncertainties: inputUncertainties || inputFluxes.map((f) => f * 0.08),
+        measuredFlags: new Array(102).fill(true) as boolean[],
+        dataSource: 'live_fits_photometry',
+        measuredCount: 102,
       };
     }
-    // High-proper-motion methane ice candidate default
-    return generateSyntheticCandidateSED('Methane Ice (TNO / Planet X)', 16.0);
-  }, [inputFluxes, inputUncertainties]);
+    if (sedQuery.data?.bands && sedQuery.data.bands.length === 102) {
+      const fluxes = sedQuery.data.bands.map((b) => b.flux_density);
+      const errs = sedQuery.data.bands.map((b) => b.flux_uncertainty);
+      const flags = sedQuery.data.bands.map((b) => Boolean(b.measured));
+      return {
+        measuredFluxes: fluxes,
+        uncertainties: errs,
+        measuredFlags: flags,
+        dataSource: sedQuery.data.data_source || (sedQuery.data.is_simulated ? 'template_model' : 'live_fits_photometry'),
+        measuredCount: sedQuery.data.measured_bands_count ?? flags.filter(Boolean).length,
+      };
+    }
+    const fallback = generateSyntheticCandidateSED('Methane Ice (TNO / Planet X)', 16.0);
+    return {
+      measuredFluxes: fallback.measuredFluxes,
+      uncertainties: fallback.uncertainties,
+      measuredFlags: new Array(102).fill(false) as boolean[],
+      dataSource: 'template_model',
+      measuredCount: 0,
+    };
+  }, [inputFluxes, inputUncertainties, sedQuery.data]);
 
   // Least-squares fit across the 4 templates
   const fitResult: FitResult = useMemo(() => {
@@ -65,19 +100,18 @@ export default function SEDChart({
     }
 
     const labels = SPHEREX_WAVELENGTHS.map((wl) => wl.toFixed(2));
-
-    // Datasets
     const datasets: any[] = [];
 
-    // 1. Measured Candidate Photometry Points
+    // 1. Candidate 102-Band Photometry Points
     datasets.push({
-      label: `Candidate Measured SED`,
+      label: dataSource === 'live_fits_photometry' ? 'SPHEREx Aperture Photometry (102 Bands)' : 'Candidate SED Profile',
       data: measuredFluxes,
       borderColor: '#FFFFFF',
-      backgroundColor: '#D4AF37',
+      backgroundColor: (ctx: any) => (measuredFlags[ctx.dataIndex] ? '#8FBC8F' : '#D4AF37'),
       pointRadius: (ctx: any) => {
         const index = ctx.dataIndex;
-        return index + 1 === selectedBand ? 7 : 3.5;
+        if (index + 1 === selectedBand) return 7.5;
+        return measuredFlags[index] ? 5.0 : 3.0;
       },
       pointHoverRadius: 8,
       pointBorderColor: '#FFFFFF',
@@ -93,7 +127,6 @@ export default function SEDChart({
     SPECTRAL_TEMPLATES.forEach((tmpl) => {
       if (!visibleTemplates[tmpl.name]) return;
       const isBest = tmpl.name === fitResult.bestTemplate.name;
-
       const scaledData = tmpl.fluxes.map((f) => f * fitResult.scaleFactor);
 
       datasets.push({
@@ -106,7 +139,7 @@ export default function SEDChart({
         pointRadius: 0,
         pointHoverRadius: 4,
         tension: 0.35,
-        fill: isBest ? true : false,
+        fill: isBest,
         order: isBest ? 2 : 3,
       });
     });
@@ -114,7 +147,7 @@ export default function SEDChart({
     const options: ChartOptions<'line'> = {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 400 },
+      animation: { duration: 350 },
       interaction: {
         mode: 'index',
         intersect: false,
@@ -143,7 +176,8 @@ export default function SEDChart({
               if (items.length === 0) return '';
               const idx = items[0].dataIndex;
               const wl = SPHEREX_WAVELENGTHS[idx].toFixed(3);
-              return `Band ${idx + 1} (${wl} µm)`;
+              const tag = measuredFlags[idx] ? ' [FITS Measured]' : '';
+              return `Band ${idx + 1} (${wl} µm)${tag}`;
             },
             label: (item) => {
               const val = typeof item.raw === 'number' ? item.raw.toFixed(3) : item.raw;
@@ -156,7 +190,7 @@ export default function SEDChart({
         x: {
           title: {
             display: true,
-            text: 'Wavelength λ (µm) — 102 SPHEREx Channels',
+            text: 'Wavelength λ (µm) — 102 SPHEREx Channels (Click any point to tune viewer band)',
             color: '#9A9DA8',
             font: { family: 'Inter', size: 11, weight: 500 },
           },
@@ -198,33 +232,48 @@ export default function SEDChart({
     return () => {
       chart.destroy();
     };
-  }, [measuredFluxes, uncertainties, fitResult, visibleTemplates, selectedBand, setSelectedBand]);
+  }, [measuredFluxes, uncertainties, measuredFlags, dataSource, fitResult, visibleTemplates, selectedBand, setSelectedBand]);
 
   const toggleTemplate = (name: string) => {
     setVisibleTemplates((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
+  const isLivePhotometry = dataSource === 'live_fits_photometry' && measuredCount > 0;
+
   return (
     <div className={`glass-panel p-4 flex flex-col gap-3 backdrop-blur-md ${className}`}>
       {/* Header & Best-Fit Telemetry */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-subtle)] pb-2.5">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Activity className="w-4 h-4 text-[var(--accent-cyan)]" />
           <span className="text-xs font-semibold tracking-wider uppercase text-[var(--text-secondary)]">
-            Spectral Energy Distribution (SED)
+            On-the-Fly 102-Band Spectrum (SED)
           </span>
           {candidateId && (
             <span className="text-xs px-2 py-0.5 rounded bg-[rgba(212,175,55,0.1)] text-[var(--accent-cyan)] font-mono">
               {candidateId}
             </span>
           )}
-          {!(inputFluxes && inputFluxes.length === 102) && (
+          {sedQuery.isLoading && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[var(--accent-cyan)]">
+              <Loader2 className="w-3 h-3 animate-spin" /> Measuring FITS aperture flux…
+            </span>
+          )}
+          {isLivePhotometry ? (
+            <span
+              data-testid="sed-live-badge"
+              className="text-[10px] px-2 py-0.5 rounded border border-[var(--accent-green)] bg-[rgba(143,188,143,0.15)] text-[var(--accent-green)] font-mono uppercase tracking-wide"
+              title="Aperture photometry extracted directly from SPHEREx FITS cutouts across detector arrays D1–D6."
+            >
+              FITS Photometry · {measuredCount} anchor bands
+            </span>
+          ) : (
             <span
               data-testid="sed-illustrative-badge"
               className="text-[10px] px-2 py-0.5 rounded border border-amber-400 bg-amber-400/15 text-amber-300 font-mono uppercase tracking-wide"
-              title="No measured photometry was supplied, so this is a generated template spectrum."
+              title="Showing fitted spectral template profile."
             >
-              Illustrative · not measured
+              {simulate ? 'Demo mode · simulated spectrum' : 'Template model · fit'}
             </span>
           )}
         </div>

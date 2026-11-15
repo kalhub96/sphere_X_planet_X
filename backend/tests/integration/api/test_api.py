@@ -64,7 +64,7 @@ class FixtureArchive:
 
 
 class FixtureImageSource:
-    async def fetch(self, obs_id: str, band: int) -> FITSImage:
+    async def fetch(self, obs_id: str, band: int, **kwargs) -> FITSImage:
         epoch = int(obs_id.rsplit("-", maxsplit=1)[-1])
         wcs = WCS(naxis=2)
         wcs.wcs.crpix = [32.0, 32.0]
@@ -191,3 +191,17 @@ async def test_evidence_and_most_endpoints_are_wired_to_real_ports() -> None:
     assert "narrative" in evidence.json()
     assert most.status_code == 200
     assert most.json()["match"] is False
+
+
+@pytest.mark.asyncio
+async def test_candidate_sed_extracts_live_fits_aperture_photometry() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/v1/candidates/wise_0855/sed?ra=133.7951&dec=-7.2451")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["candidate_id"] == "wise_0855"
+    assert payload["data_source"] == "live_fits_photometry"
+    assert payload["is_simulated"] is False
+    assert payload["measured_bands_count"] >= 1
+    assert len(payload["bands"]) == 102
+    assert any(b["measured"] for b in payload["bands"])

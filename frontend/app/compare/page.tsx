@@ -27,6 +27,7 @@ import DiscoveryGuideModal from '../components/comparison/DiscoveryGuideModal';
 import SimulatedDataBanner from '../components/comparison/SimulatedDataBanner';
 import CandidateList from '../components/candidate/CandidateList';
 import EvidencePanel from '../components/candidate/EvidencePanel';
+import SEDChart from '../components/candidate/SEDChart';
 import WavelengthSlider from '../components/sky/WavelengthSlider';
 import AladinOverlay from '../components/sky/AladinOverlay';
 import { BENCHMARK_PRESETS, DETECTOR_ARRAYS, FOV_MAX, FOV_MIN, FOV_PRESETS, type DetectorArray } from '../config/benchmarks';
@@ -424,6 +425,13 @@ function CompareViewer() {
           )}
 
           <WavelengthSlider />
+
+          <SEDChart
+            candidateId={selectedCandidate?.id}
+            ra={selectedCandidate?.ra_deg ?? ra}
+            dec={selectedCandidate?.dec_deg ?? dec}
+            simulate={isSimulated}
+          />
 
           <AladinOverlay ra={ra} dec={dec} fov={fov} />
         </div>

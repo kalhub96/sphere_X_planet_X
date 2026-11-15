@@ -27,15 +27,16 @@ async def prewarm():
             t0 = time.perf_counter()
 
             # Pre-warm observations
-            await client.get(f"/api/v1/observations?ra={ra}&dec={dec}&radius={fov/2.0}&array={arr}")
+            sim_qs = "&simulate=true" if "--simulate" in sys.argv or "--demo" in sys.argv else ""
+            await client.get(f"/api/v1/observations?ra={ra}&dec={dec}&fov={fov}&array={arr}{sim_qs}")
             # Pre-warm flipbook (epochs)
-            await client.get(f"/api/v1/epochs?ra={ra}&dec={dec}&fov={fov}&array={arr}&stretch=asinh")
+            await client.get(f"/api/v1/epochs?ra={ra}&dec={dec}&fov={fov}&array={arr}&stretch=asinh{sim_qs}")
             # Pre-warm SED
-            await client.get(f"/api/v1/candidates/bench_{name.replace(' ', '_')}/sed")
+            await client.get(f"/api/v1/candidates/bench_{name.replace(' ', '_')}/sed?ra={ra}&dec={dec}{sim_qs}")
 
             # Check cached latency
             t1 = time.perf_counter()
-            resp = await client.get(f"/api/v1/epochs?ra={ra}&dec={dec}&fov={fov}&array={arr}&stretch=asinh")
+            resp = await client.get(f"/api/v1/epochs?ra={ra}&dec={dec}&fov={fov}&array={arr}&stretch=asinh{sim_qs}")
             cached_latency_ms = (time.perf_counter() - t1) * 1000
 
             print(f"✓ {name:<18}: Pre-warmed | Cached Latency: {cached_latency_ms:.1f} ms (Status: {resp.status_code})")

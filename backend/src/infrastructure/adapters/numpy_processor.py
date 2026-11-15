@@ -241,11 +241,17 @@ class NumpyImageProcessor:
 
                 candidates.append(
                     Candidate(
-                        id=f"cand_{int(abs(ra*10000))}_{int(abs(dec*10000))}",
+                        id=f"cand_{int(abs(ra*10000))}_{int(abs(dec*10000))}_{x}_{y}",
                         ra=round(ra, 6),
                         dec=round(dec, 6),
-                        pixel_x=x,
-                        pixel_y=y,
+                        pixel_x=int(x),
+                        pixel_y=int(y),
+                        snr_change=round(snr, 2),
+                        delta_flux=round(snr * max(std, 0.5), 3),
+                        delta_flux_sigma=round(max(std, 0.5), 3),
+                        motion_arcsec=round(abs(snr) * 0.45, 2),
+                        artifact_probability=round(float(art_prob), 3),
+                        confidence_score=round(conf, 3),
                         snr=round(abs(snr), 2),
                         confidence=round(conf, 3),
                         classification=cand_type,

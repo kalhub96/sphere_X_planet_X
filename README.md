@@ -28,7 +28,7 @@ Built for the **2026 NASA Space Apps Challenge: "Planet X and SPHEREx"**.
 | **Cross-mission overlay** | Aladin Lite panel showing Gaia DR3 sources over 2010–2014 unWISE infrared imagery. |
 | **Quality metadata** | Per-frame clean-pixel percentage and flagged-pixel counts from the FITS `FLAGS` plane. |
 | **Candidates & evidence** | Difference-image source detection, confidence scoring, Solar System (MOST) cross-match and an evidence panel with caveats. |
-| **Spectrum view** | 102-band spectral-energy-distribution plot with template overlays (see *Known limitations*). |
+| **On-the-fly 102-band spectrum (SED)** | Extracts circular aperture photometry (`r = 2.5 px`, background annulus `4–7 px`) from SPHEREx FITS cutouts across detector arrays `D1`–`D6` and fits 102-band spectral templates (`Y-Dwarf`, `Methane Ice / Planet X`, `Comet`, `High-z Galaxy`). |
 
 Data comes from the NASA/IPAC Infrared Science Archive (IRSA): the backend queries the
 SPHEREx `spherex_dr1` and `spherex_qr3` collections through the IVOA SIA2 service and
@@ -89,9 +89,6 @@ docker compose up --build
 
 Frontend on port 3000, backend on port 8000, Redis on 6379.
 
-> **Note:** the Next.js files at the repository root (`package.json`, `next.config.ts`,
-> `tsconfig.json`) are an unused leftover of the project template. The real app lives in
-> `frontend/` and `backend/`.
 
 ---
 
@@ -119,7 +116,7 @@ Frontend on port 3000, backend on port 8000, Redis on 6379.
 | `GET /api/v1/falsecolor?ra=&dec=&fov=&red=D6&green=D3&blue=D1&epoch=` | Real three-band RGB composite from one epoch. |
 | `GET /api/v1/compare?obs_a=&obs_b=&band=` | Two-observation comparison with difference image and candidates. |
 | `GET /api/v1/candidates/{id}/evidence` | Plain-language evidence, measurements and caveats. |
-| `GET /api/v1/candidates/{id}/sed` | Template spectrum for a candidate (illustrative, see below). |
+| `GET /api/v1/candidates/{id}/sed?ra=&dec=&simulate=` | On-the-fly 102-band SED combining FITS aperture photometry across `D1`–`D6` with physical template fitting. |
 | `GET /api/v1/most-check?ra=&dec=&epoch_mjd=` | Solar System cross-match (IRSA MOST). |
 | `GET /api/v1/wavelengths` | The 102 SPHEREx bands and detector arrays. |
 
@@ -168,8 +165,7 @@ Tests: `cd backend && pytest`. Type-check the frontend: `cd frontend && npx tsc 
 - **Live archive path:** the real-data code was developed and tested against recorded fixtures,
   not against the live IRSA service. Before presenting results, open WISE 0855 with Demo mode
   **off** and confirm real frames and `data_source: "live"`.
-- **Spectrum (SED) plot** shows generated template spectra, labelled *“Illustrative · not
-  measured”*, rather than photometry measured from the images.
+- **Spectrum (SED) sampling:** To keep interactive response times fast, the backend extracts live aperture photometry from representative exposures across each of the 6 detector arrays (`D1`–`D6`, up to 12 FITS cutouts per query) and interpolates the remaining channels using the best-fit physical continuum.
 - **Band → wavelength table** is a log-spaced approximation of the 102 SPHEREx bands, not the
   per-pixel wavelength map from the FITS headers.
 - **Demo mode** is a scripted simulation, not a prediction of what SPHEREx will see.

@@ -249,3 +249,50 @@ export function useEvidence(candidateId: string | null) {
     staleTime: 30 * 60 * 1000,
   });
 }
+
+export interface CandidateSEDResponse {
+  candidate_id: string;
+  ra?: number;
+  dec?: number;
+  is_simulated: boolean;
+  data_source: 'live_fits_photometry' | 'simulated_photometry' | 'template_model' | string;
+  measured_bands_count?: number;
+  note?: string;
+  best_template: string;
+  reduced_chi2: number;
+  bands: Array<{
+    band_index: number;
+    wavelength_um: number;
+    flux_density: number;
+    flux_uncertainty: number;
+    measured?: boolean;
+  }>;
+}
+
+export function useCandidateSED(
+  candidateId: string | null | undefined,
+  ra?: number,
+  dec?: number,
+  simulate = false
+) {
+  const resolvedId = candidateId || 'sky_patch';
+  return useQuery<CandidateSEDResponse>({
+    queryKey: ['candidate-sed', resolvedId, ra, dec, simulate],
+    retry: 1,
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (typeof ra === 'number' && Number.isFinite(ra)) params.set('ra', String(ra));
+      if (typeof dec === 'number' && Number.isFinite(dec)) params.set('dec', String(dec));
+      if (simulate) params.set('simulate', 'true');
+      const qs = params.toString();
+      const url = `${API_BASE}/api/v1/candidates/${encodeURIComponent(resolvedId)}/sed${qs ? `?${qs}` : ''}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw await readError(res, 'Failed to extract 102-band SED');
+      }
+      return res.json();
+    },
+    enabled: Boolean(candidateId) || (typeof ra === 'number' && Number.isFinite(ra) && typeof dec === 'number' && Number.isFinite(dec)),
+    staleTime: 15 * 60 * 1000,
+  });
+}

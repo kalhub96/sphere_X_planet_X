@@ -35,10 +35,10 @@ class UnreachableIBE(IRSAIBEAdapter):
 class FlakyImageSource(FixtureImageSource):
     """Epoch 2 (fixture-1) cannot be downloaded; the others can."""
 
-    async def fetch(self, obs_id: str, band: int):
+    async def fetch(self, obs_id: str, band: int, **kwargs):
         if obs_id.endswith("-1"):
             raise IRSAError("IRSA timed out for fixture-1")
-        return await super().fetch(obs_id, band)
+        return await super().fetch(obs_id, band, **kwargs)
 
 
 def _sia(tmp_path) -> IRSASIAAdapter:

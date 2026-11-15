@@ -241,8 +241,8 @@ function TimelapseInner() {
     <div className="min-h-screen bg-[#0a0b0f] text-[#F3EEE0] font-sans flex flex-col">
       {!embed && (
         <header className="px-6 py-3 border-b border-[var(--border-subtle)] flex items-center gap-3 sticky top-0 bg-[rgba(10,11,15,0.85)] backdrop-blur-md z-10">
-          <Link href="/explore" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-            ← Explorer
+          <Link href="/compare" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+            ← Blink Viewer
           </Link>
           <Telescope className="w-5 h-5 text-[var(--accent-cyan)]" />
           <h1 className="st-serif text-2xl font-normal tracking-tight leading-none">SPHEREx Time-lapse</h1>

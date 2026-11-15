@@ -58,13 +58,13 @@ export function useSkyQueryState() {
     const urlRa = finiteInRange(searchParams.get('ra'), 0, 360);
     const urlDec = finiteInRange(searchParams.get('dec'), -90, 90);
     const urlFov = finiteInRange(searchParams.get('fov'), FOV_MIN, FOV_MAX);
-    const urlBand = finiteInRange(searchParams.get('band'), 0, 101);
+    const urlBand = finiteInRange(searchParams.get('band'), 0, 102);
     const urlArray = validArray(searchParams.get('array'));
     const urlMode = searchParams.get('mode');
 
     if (urlRa !== null && urlDec !== null) setCoordinates(urlRa, urlDec);
     if (urlFov !== null) setFov(urlFov);
-    if (urlBand !== null) setSelectedBand(urlBand);
+    if (urlBand !== null) setSelectedBand(Math.max(1, Math.round(urlBand)));
     setSelectedArray(urlArray);
     if (urlMode !== null && MODES.includes(urlMode as InvestigationMode)) {
       setInvestigationMode(urlMode as InvestigationMode);

@@ -37,7 +37,7 @@ class IRSAIBEAdapter:
         self._parser = AstropyFITSAdapter()
         self._cache = cache or RedisCache("redis://localhost:6379")
 
-    async def fetch(self, obs_id: str, band: int = 50) -> FITSImage:
+    async def fetch(self, obs_id: str, band: int = 50, fits_url: str | None = None) -> FITSImage:
         """Return the cutout for one observation.
 
         Real SPHEREx data only. The one exception is an observation ID minted by
@@ -56,15 +56,15 @@ class IRSAIBEAdapter:
             except Exception:
                 pass
 
-        fits_url = await self._fits_url_for(obs_id)
-        if not (fits_url.startswith("http://") or fits_url.startswith("https://")):
+        resolved_url = fits_url or await self._fits_url_for(obs_id)
+        if not (resolved_url.startswith("http://") or resolved_url.startswith("https://")):
             raise NoDataError(f"No download URL is known for SPHEREx observation {obs_id}.")
 
         last_error: Exception | None = None
         for attempt in range(2):
             try:
                 async with httpx.AsyncClient(timeout=self._timeout, follow_redirects=True) as client:
-                    response = await client.get(fits_url)
+                    response = await client.get(resolved_url)
                 if response.status_code == 200 and len(response.content) > 1000:
                     await self._cache.set_bytes(cache_key, response.content, ttl=FITS_CACHE_TTL)
                     return self._parser.parse(response.content, obs_id=obs_id)

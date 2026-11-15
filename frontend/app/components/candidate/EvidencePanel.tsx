@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Candidate, Evidence } from '../../types';
 import { useEvidence } from '../../hooks/useObservations';
+import { useSkyStore } from '../../store/skyStore';
 import { crossMatchSolarSystem } from '../../lib/solarSystemCrossmatch';
+import SEDChart from './SEDChart';
 import {
   X,
   ShieldAlert,
@@ -30,6 +32,7 @@ interface EvidencePanelProps {
 
 export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps) {
   const { data: evidence, isLoading } = useEvidence(candidate?.id || null);
+  const simulate = useSkyStore((state) => state.simulate);
   const [copiedBibtex, setCopiedBibtex] = useState(false);
 
   if (!candidate) return null;
@@ -374,6 +377,9 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
             )}
           </div>
 
+          {/* 102-Band On-the-Fly Spectrum (SED) */}
+          <SEDChart candidateId={candidate.id} ra={candidate.ra_deg} dec={candidate.dec_deg} simulate={simulate} />
+
           {/* Mandatory Scientific Caveats Banner */}
           <div className="glass-panel p-4 border border-[rgba(245,158,11,0.4)] bg-[rgba(245,158,11,0.06)] space-y-2.5">
             <div className="text-xs uppercase font-mono tracking-wider text-[var(--accent-gold)] flex items-center gap-1.5 font-bold">
@@ -405,7 +411,7 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
 
             <div className="space-y-1.5 font-mono text-xs">
               <a
-                href={`https://irsa.ipac.caltech.edu/ibe/data/spherex/qr3?POS=${candidate.ra_deg},${candidate.dec_deg}`}
+                href={`https://irsa.ipac.caltech.edu/SIA?COLLECTION=spherex_qr3&POS=circle+${candidate.ra_deg}+${candidate.dec_deg}+0.04`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-between p-2 rounded bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)] border border-[var(--border-subtle)] text-[var(--accent-cyan)] transition-colors"

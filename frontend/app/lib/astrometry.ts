@@ -1,4 +1,8 @@
-import * as THREE from 'three';
+export interface Vector3D {
+  x: number;
+  y: number;
+  z: number;
+}
 
 const DEG2RAD = Math.PI / 180;
 const RAD2DEG = 180 / Math.PI;
@@ -10,21 +14,21 @@ const RAD2DEG = 180 / Math.PI;
  * X is Vernal Equinox (RA = 0°, Dec = 0°)
  * Z is RA = 90°, Dec = 0°
  */
-export function icrsToUnitVector(raDeg: number, decDeg: number, radius = 100): THREE.Vector3 {
+export function icrsToUnitVector(raDeg: number, decDeg: number, radius = 100): Vector3D {
   const raRad = raDeg * DEG2RAD;
   const decRad = decDeg * DEG2RAD;
-  return new THREE.Vector3(
-    radius * Math.cos(decRad) * Math.cos(raRad),
-    radius * Math.sin(decRad),
-    radius * Math.cos(decRad) * Math.sin(raRad)
-  );
+  return {
+    x: radius * Math.cos(decRad) * Math.cos(raRad),
+    y: radius * Math.sin(decRad),
+    z: radius * Math.cos(decRad) * Math.sin(raRad),
+  };
 }
 
 /**
  * Inverse conversion: 3D point on or near sphere -> (RA, Dec in degrees)
  */
-export function vectorToIcrs(vec: THREE.Vector3): { ra: number; dec: number } {
-  const r = vec.length();
+export function vectorToIcrs(vec: Vector3D): { ra: number; dec: number } {
+  const r = Math.hypot(vec.x, vec.y, vec.z);
   if (r === 0) return { ra: 0, dec: 0 };
 
   const decRad = Math.asin(Math.max(-1, Math.min(1, vec.y / r)));
@@ -182,7 +186,7 @@ export function keplerToCartesian(
   OmegaDeg: number,
   MDeg: number,
   scale = 1.0
-): THREE.Vector3 {
+): Vector3D {
   const i = iDeg * DEG2RAD;
   const omega = omegaDeg * DEG2RAD;
   const Omega = OmegaDeg * DEG2RAD;
@@ -213,11 +217,11 @@ export function keplerToCartesian(
   const Qy = -sO * so + cO * co * ci;
   const Qz = co * si;
 
-  return new THREE.Vector3(
-    x_pf * Px + y_pf * Qx,
-    x_pf * Pz + y_pf * Qz,
-    x_pf * Py + y_pf * Qy
-  );
+  return {
+    x: x_pf * Px + y_pf * Qx,
+    y: x_pf * Pz + y_pf * Qz,
+    z: x_pf * Py + y_pf * Qy,
+  };
 }
 
 /**

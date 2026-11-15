@@ -72,7 +72,8 @@ async def verify_target(client: AsyncClient, target: dict) -> bool:
 
     # 1. Observations endpoint test
     t0 = time.perf_counter()
-    resp_obs = await client.get(f"/api/v1/observations?ra={ra}&dec={dec}&radius={fov/2.0}&array={arr}")
+    sim_qs = "&simulate=true" if "--simulate" in sys.argv or "--demo" in sys.argv else ""
+    resp_obs = await client.get(f"/api/v1/observations?ra={ra}&dec={dec}&fov={fov}&array={arr}{sim_qs}")
     t_obs = (time.perf_counter() - t0) * 1000
     if resp_obs.status_code != 200:
         print(f"❌ FAIL: /observations returned status {resp_obs.status_code}")
@@ -85,7 +86,7 @@ async def verify_target(client: AsyncClient, target: dict) -> bool:
 
     # 2. Multi-epoch flipbook / epochs endpoint test (Cold fetch)
     t0 = time.perf_counter()
-    resp_ep = await client.get(f"/api/v1/epochs?ra={ra}&dec={dec}&fov={fov}&array={arr}&stretch=asinh")
+    resp_ep = await client.get(f"/api/v1/epochs?ra={ra}&dec={dec}&fov={fov}&array={arr}&stretch=asinh{sim_qs}")
     t_ep_cold = (time.perf_counter() - t0) * 1000
     if resp_ep.status_code != 200:
         print(f"❌ FAIL: /epochs returned status {resp_ep.status_code} ({resp_ep.text[:200]})")
@@ -109,14 +110,16 @@ async def verify_target(client: AsyncClient, target: dict) -> bool:
 
     # 3. Cached fetch speed (< 150ms)
     t0 = time.perf_counter()
-    resp_ep_cached = await client.get(f"/api/v1/epochs?ra={ra}&dec={dec}&fov={fov}&array={arr}&stretch=asinh")
+    resp_ep_cached = await client.get(f"/api/v1/epochs?ra={ra}&dec={dec}&fov={fov}&array={arr}&stretch=asinh{sim_qs}")
+    resp_sed = await client.get(f"/api/v1/candidates/bench_{name.replace(' ', '_')}/sed?ra={ra}&dec={dec}{sim_qs}")
+    assert resp_sed.status_code == 200 and len(resp_sed.json().get("bands", [])) == 102, "102-band SED verified"
     t_ep_cached = (time.perf_counter() - t0) * 1000
     print(f"✓ Cached Flipbook Latency: {t_ep_cached:.1f} ms")
 
     # 4. Target-Specific Science Signature Verification
     if name == "WISE 0855":
         # Compare D6 (thermal IR 4.3-5.0 um) vs D1 (0.75-1.1 um)
-        resp_d1 = await client.get(f"/api/v1/epochs?ra={ra}&dec={dec}&fov={fov}&array=D1&stretch=asinh")
+        resp_d1 = await client.get(f"/api/v1/epochs?ra={ra}&dec={dec}&fov={fov}&array=D1&stretch=asinh{sim_qs}")
         assert resp_d1.status_code == 200
         print("✓ WISE 0855 Thermal IR Verification: Emerges brightly in D6 coadd, faint in D1")
 

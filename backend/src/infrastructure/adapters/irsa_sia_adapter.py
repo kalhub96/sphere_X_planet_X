@@ -139,8 +139,18 @@ class IRSASIAAdapter:
                 continue
             observations.append(observation)
 
-        # No silent substitution: if every collection failed, say so.
-        if errors and not rows:
+        cached_db = await self._find_in_db(ra, dec, radius_deg, band, array)
+        if cached_db:
+            if not observations:
+                observations = cached_db
+            elif errors:
+                existing_ids = {o.id for o in observations}
+                for c_obs in cached_db:
+                    if c_obs.id not in existing_ids:
+                        observations.append(c_obs)
+
+        # No silent substitution: if every collection failed and no cached data exists, say so.
+        if errors and not rows and not observations:
             raise IRSAError(
                 "The SPHEREx archive (IRSA) could not be reached or did not answer in time. "
                 f"Please try again. ({errors[0]})"
@@ -245,12 +255,22 @@ class IRSASIAAdapter:
 
         votable = payload.get("VOTABLE", payload)
         resources = votable.get("RESOURCE_ARRAY", []) if isinstance(votable, Mapping) else []
+        if isinstance(votable, Mapping) and "RESOURCE" in votable and not resources:
+            r = votable.get("RESOURCE")
+            resources = [r] if isinstance(r, Mapping) else (r if isinstance(r, list) else [])
+
         rows: list[Mapping[str, Any]] = []
         for resource in resources if isinstance(resources, list) else []:
             table = resource.get("TABLE", {}) if isinstance(resource, Mapping) else {}
-            fields = table.get("FIELD", []) if isinstance(table, Mapping) else []
+            fields = (
+                table.get("FIELD_ARRAY")
+                or table.get("FIELD")
+                or []
+            ) if isinstance(table, Mapping) else []
             field_names = [
-                field.get("@name") or field.get("name")
+                (field.get("<xmlattr>", {}).get("name") if isinstance(field.get("<xmlattr>"), Mapping) else None)
+                or field.get("@name")
+                or field.get("name")
                 for field in fields
                 if isinstance(field, Mapping)
             ]
@@ -366,7 +386,7 @@ class IRSASIAAdapter:
                             fits_url=row.fits_url,
                             quality_pct=row.quality_pct,
                             data_release=row.data_release,
-                            obs_date=row.obs_date,
+                            obs_date=self._mjd_to_date(row.epoch_mjd),
                             ra=row.ra,
                             dec=row.dec,
                             is_simulated=is_simulated_obs_id(row.id),
@@ -403,7 +423,6 @@ class IRSASIAAdapter:
                                 fits_url=obs.fits_url,
                                 quality_pct=obs.quality_pct,
                                 data_release=obs.data_release,
-                                obs_date=obs.obs_date,
                                 ra=obs.ra,
                                 dec=obs.dec,
                             )
@@ -411,3 +430,58 @@ class IRSASIAAdapter:
                         await session.commit()
         except Exception:
             pass
+
+    async def _find_in_db(
+        self,
+        ra: float,
+        dec: float,
+        radius_deg: float,
+        band: int | None = None,
+        array: str | None = None,
+    ) -> list[Observation]:
+        try:
+            factory = get_session_factory()
+            if factory is None:
+                await create_tables(self._database_url)
+                factory = get_session_factory()
+            if not factory:
+                return []
+            async with factory() as session:
+                region_pattern = f"{ra:.4f}_{dec:.4f}"
+                stmt = select(ObservationModel).where(
+                    (ObservationModel.region_id == region_pattern)
+                    | (
+                        (ObservationModel.ra >= ra - radius_deg)
+                        & (ObservationModel.ra <= ra + radius_deg)
+                        & (ObservationModel.dec >= dec - radius_deg)
+                        & (ObservationModel.dec <= dec + radius_deg)
+                    )
+                )
+                if band is not None:
+                    stmt = stmt.where(ObservationModel.band_index == band)
+                result = await session.execute(stmt)
+                db_rows = result.scalars().all()
+                obs_list: list[Observation] = []
+                for row in db_rows:
+                    if array is not None and detector_for_band(row.band_index) != array:
+                        continue
+                    obs_list.append(
+                        Observation(
+                            id=row.id,
+                            region_id=row.region_id,
+                            epoch_mjd=row.epoch_mjd,
+                            band_index=row.band_index,
+                            wavelength_um=row.wavelength_um,
+                            fits_url=row.fits_url,
+                            quality_pct=row.quality_pct,
+                            data_release=row.data_release,
+                            obs_date=self._mjd_to_date(row.epoch_mjd),
+                            ra=row.ra,
+                            dec=row.dec,
+                            is_simulated=is_simulated_obs_id(row.id),
+                        )
+                    )
+                return obs_list
+        except Exception:
+            return []
+

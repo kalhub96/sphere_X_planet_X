@@ -16,7 +16,7 @@ import {
   useTransform,
   type MotionValue,
 } from 'framer-motion';
-import CelestialSphere from './components/sky/CelestialSphere';
+import CosmicStarfield from './components/sky/CosmicStarfield';
 import { Telescope, ArrowRight, Compass, Layers, Link2, ExternalLink, Search, Sparkles } from 'lucide-react';
 import { parseCoordinateInput } from './lib/astrometry';
 
@@ -141,26 +141,26 @@ const STAT_BADGES = [
 const CAPABILITIES = [
   {
     n: '01',
-    title: '3D Celestial Explorer',
-    desc: 'Browse the sky on an interactive sphere and pick a patch to inspect.',
-    href: '/explore',
+    title: 'Multi-Epoch Flipbook',
+    desc: 'Loop through SPHEREx survey passes like a video to spot proper motion and transients.',
+    href: '/compare',
     cta: 'Launch',
-    Icon: Compass,
-  },
-  {
-    n: '02',
-    title: 'Blink Viewer',
-    desc: 'Step through images of one patch over time to spot objects that move or change brightness.',
-    href: blinkUrl(133.7951, -7.2451, 300),
-    cta: 'Open',
     Icon: Layers,
   },
   {
+    n: '02',
+    title: 'Detector Coaddition (D1–D6)',
+    desc: 'Stack multi-channel exposures across 6 detector arrays to boost SNR on faint cold brown dwarfs.',
+    href: blinkUrl(133.7951, -7.2451, 300),
+    cta: 'Open',
+    Icon: Sparkles,
+  },
+  {
     n: '03',
-    title: 'Shareable URLs',
-    desc: 'Every view is set by RA, Dec and field of view in the URL, so it can be linked or embedded.',
+    title: 'Aladin Lite v3 & SED Fit',
+    desc: 'Cross-match with Gaia DR3 / unWISE 15-year baselines, and fit 102-band physical spectra.',
     href: blinkUrl(269.452, 4.693, 300),
-    cta: 'Try',
+    cta: 'Inspect',
     Icon: Link2,
   },
 ];
@@ -413,7 +413,7 @@ export default function HomePage() {
         />
 
         <motion.div style={{ scale: bgScale }} className="fixed inset-0 z-0 pointer-events-auto opacity-70">
-          <CelestialSphere className="w-full h-full" />
+          <CosmicStarfield className="w-full h-full" />
         </motion.div>
         <div className="fixed inset-0 z-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(10,11,15,0.2)_0%,rgba(10,11,15,0.7)_65%,#0a0b0f_100%)]" />
         <CursorGlow />
@@ -438,10 +438,10 @@ export default function HomePage() {
             </nav>
 
             <Link
-              href="/explore"
+              href="/compare"
               className="px-4 py-2 rounded-sm bg-[var(--st-gold)] text-[#0a0b0f] text-xs font-mono font-semibold uppercase tracking-[0.12em] hover:shadow-[0_0_16px_rgba(212,175,55,0.5)] transition-all flex items-center gap-1.5"
             >
-              Launch Explorer <ArrowRight className="w-4 h-4" />
+              Launch Viewer <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </motion.header>
@@ -483,10 +483,10 @@ export default function HomePage() {
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-4">
                   <Magnetic>
                     <Link
-                      href="/explore"
+                      href="/compare"
                       className="px-6 py-3.5 rounded-sm bg-[var(--st-gold)] text-[#0a0b0f] font-semibold text-sm hover:shadow-[0_0_24px_rgba(212,175,55,0.6)] transition-all flex items-center gap-2"
                     >
-                      <Compass className="w-4 h-4" /> Browse the sky
+                      <Layers className="w-4 h-4" /> Open Blink Viewer
                     </Link>
                   </Magnetic>
                   <Magnetic>
@@ -697,10 +697,10 @@ export default function HomePage() {
                 <div className="flex flex-wrap justify-center gap-4">
                   <Magnetic>
                     <Link
-                      href="/explore"
+                      href="/compare"
                       className="inline-block px-6 py-3.5 rounded-sm bg-[var(--st-gold)] text-[#0a0b0f] font-semibold text-sm hover:shadow-[0_0_24px_rgba(212,175,55,0.6)] transition-all"
                     >
-                      Launch 3D Explorer
+                      Launch Blink Viewer
                     </Link>
                   </Magnetic>
                   <Magnetic>
@@ -722,8 +722,8 @@ export default function HomePage() {
             SkyTrace · NASA Space Apps Challenge 2026 · <span className="text-[var(--st-gold)]">SPHEREx {RELEASE} release</span>
           </span>
           <span className="flex items-center gap-5">
-            <Link href="/explore" className="hover:text-white transition-colors">3D Explorer</Link>
             <Link href="/compare" className="hover:text-white transition-colors">Blink Viewer</Link>
+            <Link href="/timelapse" className="hover:text-white transition-colors">Time-lapse</Link>
             <a
               href="https://irsa.ipac.caltech.edu/Missions/spherex.html"
               target="_blank"

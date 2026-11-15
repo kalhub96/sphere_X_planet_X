@@ -22,8 +22,7 @@ services:
       REDIS_URL: "redis://redis:6379"
       DATABASE_URL: "sqlite+aiosqlite:///./data/skytrace.db"
       IRSA_SIA2_URL: "https://irsa.ipac.caltech.edu/SIA"
-      IRSA_IBE_URL: "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1"
-      IRSA_MOST_URL: "https://irsa.ipac.caltech.edu/applications/MOST"
+      IRSA_MOST_URL: "https://irsa.ipac.caltech.edu/cgi-bin/MOST/nph-most"
       LOG_LEVEL: "INFO"
     volumes:
       - ./backend:/app

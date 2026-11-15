@@ -71,7 +71,7 @@ class GenerateEvidenceUC:
             measurements=measurements,
             caveats=caveats,
             irsa_links=[
-                {"label": "NASA IRSA SPHEREx QR3 Archive", "url": "https://irsa.ipac.caltech.edu/ibe/data/spherex/qr3"},
+                {"label": "NASA IRSA SPHEREx SIA2 Archive", "url": f"https://irsa.ipac.caltech.edu/SIA?COLLECTION=spherex_qr3&POS=circle+{ra:.5f}+{dec:.5f}+0.04"},
                 {"label": "NASA MOST Solar System Cross-Match", "url": "https://irsa.ipac.caltech.edu/applications/MOST"},
             ],
             quality_flags=quality_flags,
