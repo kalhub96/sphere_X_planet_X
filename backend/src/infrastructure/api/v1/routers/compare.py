@@ -38,20 +38,12 @@ async def compare_observations(
     if not isinstance(wcs_dict, dict):
         raise HTTPException(status_code=500, detail="Comparison cache is missing its FITS WCS header")
 
-    # False-color RGB if images available
-    falsecolor_b64 = None
-    if result.image_a and result.image_b:
-        try:
-            falsecolor_b64 = await processor.render_false_color(result.image_b, result.image_a, result.image_a)
-        except Exception:
-            pass
-
     return CompareResponse(
         comparison_id=comparison_id,
         image_a_b64=result.tile_a_b64,
         image_b_b64=result.tile_b_b64,
         difference_b64=result.tile_diff_b64,
-        falsecolor_b64=falsecolor_b64,
+        falsecolor_b64=None,
         wcs=WCSHeader(**wcs_dict),
         candidates=[CandidateResponse(**c.__dict__) for c in result.candidates],
         metadata={**result.metadata, "processing_ms": elapsed_ms},

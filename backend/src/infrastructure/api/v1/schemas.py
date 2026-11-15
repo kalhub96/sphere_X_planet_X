@@ -92,6 +92,39 @@ class EpochsResponse(BaseModel):
     # "simulated" = every frame is simulated demo data (NOT SPHEREx data)
     data_source: str = "live"
     is_simulated: bool = False
+    # Epochs that could not be loaded (e.g. an archive download failed). The
+    # frames that ARE shown are real; nothing is invented to fill the gap.
+    warnings: list[str] = Field(default_factory=list)
+
+class CombineResponse(BaseModel):
+    ra: float
+    dec: float
+    fov: float
+    plus: list[int]
+    minus: list[int]
+    kind: str                      # "stack" or "difference"
+    label: str
+    image_b64: str
+    data_source: str = "live"
+    is_simulated: bool = False
+
+class FalseColorChannel(BaseModel):
+    channel: str                   # "red" | "green" | "blue"
+    array: str                     # "D1".."D6"
+    wavelength_min_um: float
+    wavelength_max_um: float
+    n_exposures: int
+
+class FalseColorResponse(BaseModel):
+    ra: float
+    dec: float
+    fov: float
+    epoch_index: int
+    obs_date: str
+    image_b64: str
+    channels: list[FalseColorChannel]
+    data_source: str = "live"
+    is_simulated: bool = False
 
 class EvidenceResponse(BaseModel):
     candidate_id: str

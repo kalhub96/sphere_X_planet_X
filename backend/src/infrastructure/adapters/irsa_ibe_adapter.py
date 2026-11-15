@@ -13,7 +13,8 @@ from astropy.wcs import WCS
 from sqlalchemy import select
 
 from ...domain.entities.fits_image import FITSImage
-from ...domain.exceptions import NoDataError
+from ...domain.entities.observation import is_simulated_obs_id
+from ...domain.exceptions import IRSAError, NoDataError
 from ..db.models import ObservationModel
 from ..db.session import create_tables, get_session_factory
 from .astropy_fits_adapter import AstropyFITSAdapter
@@ -28,17 +29,25 @@ class IRSAIBEAdapter:
     def __init__(
         self,
         database_url: str = "sqlite+aiosqlite:///./data/skytrace.db",
-        timeout: float = 3.5,
+        timeout: float = 60.0,
         cache: RedisCache | None = None,
-        allow_simulation: bool = True,
     ) -> None:
-        self._allow_simulation = allow_simulation
         self._database_url = database_url
         self._timeout = timeout
         self._parser = AstropyFITSAdapter()
         self._cache = cache or RedisCache("redis://localhost:6379")
 
     async def fetch(self, obs_id: str, band: int = 50) -> FITSImage:
+        """Return the cutout for one observation.
+
+        Real SPHEREx data only. The one exception is an observation ID minted by
+        the user's explicit Demo mode (see ``is_simulated_obs_id``), which yields
+        a frame flagged ``is_simulated=True``. A failed download is reported as
+        an error; it is never replaced by invented pixels.
+        """
+        if is_simulated_obs_id(obs_id):
+            return self._synthesize_calibrated_cutout(obs_id, band)
+
         cache_key = f"fits-cutout:{obs_id}:{band}"
         cached = await self._cache.get_bytes(cache_key)
         if cached is not None:
@@ -48,27 +57,27 @@ class IRSAIBEAdapter:
                 pass
 
         fits_url = await self._fits_url_for(obs_id)
+        if not (fits_url.startswith("http://") or fits_url.startswith("https://")):
+            raise NoDataError(f"No download URL is known for SPHEREx observation {obs_id}.")
 
-        # Try live download if URL is http/https
-        if fits_url and (fits_url.startswith("http://") or fits_url.startswith("https://")):
+        last_error: Exception | None = None
+        for attempt in range(2):
             try:
                 async with httpx.AsyncClient(timeout=self._timeout, follow_redirects=True) as client:
                     response = await client.get(fits_url)
-                    if response.status_code == 200 and len(response.content) > 1000:
-                        await self._cache.set_bytes(cache_key, response.content, ttl=FITS_CACHE_TTL)
-                        return self._parser.parse(response.content, obs_id=obs_id)
-            except Exception:
-                pass
-
-        # The live download failed. Either refuse, or return a frame that is
-        # explicitly flagged ``is_simulated=True`` (never silently passed off
-        # as archive data).
-        if not self._allow_simulation:
-            raise NoDataError(
-                f"Could not download the SPHEREx cutout for {obs_id} from IRSA, "
-                "and simulated data is disabled (ALLOW_SIMULATED_DATA=false)."
-            )
-        return self._synthesize_calibrated_cutout(obs_id, band)
+                if response.status_code == 200 and len(response.content) > 1000:
+                    await self._cache.set_bytes(cache_key, response.content, ttl=FITS_CACHE_TTL)
+                    return self._parser.parse(response.content, obs_id=obs_id)
+                last_error = IRSAError(f"IRSA answered HTTP {response.status_code} for {obs_id}")
+                if response.status_code not in (502, 503, 504):
+                    break
+            except Exception as error:  # network error, timeout, unreadable FITS
+                last_error = error
+            if attempt < 1:
+                await asyncio.sleep(0.5)
+        raise IRSAError(
+            f"Could not download the SPHEREx cutout for {obs_id} from IRSA: {last_error}"
+        ) from last_error
 
     async def _fits_url_for(self, obs_id: str) -> str:
         try:
@@ -123,7 +132,7 @@ class IRSAIBEAdapter:
                 except Exception:
                     pass
 
-        epoch_mjd = 60430.0 + (pass_num - 1) * 183.0
+        epoch_mjd = 60810.0 + (pass_num - 1) * 183.0
         dt_years = (pass_num - 1) * 0.50
 
         pix_scale_deg = 6.2 / 3600.0
@@ -196,7 +205,7 @@ class IRSAIBEAdapter:
         # 5. R Draconis (Mira variable, pulsation)
         elif abs(ra - 248.1633) < 0.05 and abs(dec - 66.7539) < 0.05:
             bx, by = 64.0, 64.0
-            phase = (epoch_mjd - 60400.0) / 245.5 * 2 * math.pi
+            phase = (epoch_mjd - 60780.0) / 245.5 * 2 * math.pi
             pulsation_factor = 0.5 + 0.5 * math.sin(phase)
             mira_flux = 150.0 + 400.0 * pulsation_factor
             self._render_gaussian_source(data, bx, by, mira_flux, fwhm=2.2)

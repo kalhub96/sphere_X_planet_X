@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+.fr-*
 
 # debug
 npm-debug.log*
@@ -56,5 +57,3 @@ backend/.venv/
 # Build caches
 .next/
 backend/.venv
-__pycache__/
-*.pyc

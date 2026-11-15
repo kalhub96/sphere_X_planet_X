@@ -2,7 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Candidate,
   ComparisonResult,
+  CombineResult,
   EpochsResult,
+  FalseColorResult,
   Evidence,
   Observation,
   WavelengthBand,
@@ -11,15 +13,27 @@ import type { DetectorArray } from '../config/benchmarks';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+/** Turn a failed API response into a readable message (the backend explains what went wrong). */
+async function readError(res: Response, fallback: string): Promise<Error> {
+  try {
+    const body = await res.json();
+    if (body && typeof body.detail === 'string') return new Error(body.detail);
+  } catch {
+    // body was not JSON
+  }
+  return new Error(`${fallback} (${res.status} ${res.statusText})`.trim());
+}
+
 export function useObservations(
   ra: number,
   dec: number,
   fov = 0.08,
   band?: number,
-  array?: DetectorArray | null
+  array?: DetectorArray | null,
+  simulate = false
 ) {
   return useQuery<Observation[]>({
-    queryKey: ['observations', ra, dec, fov, band, array],
+    queryKey: ['observations', ra, dec, fov, band, array, simulate],
     queryFn: async () => {
       const params = new URLSearchParams({ ra: String(ra), dec: String(dec), fov: String(fov) });
       if (array) {
@@ -28,9 +42,10 @@ export function useObservations(
         // UI and share URLs are one-indexed; the current backend transport is zero-indexed.
         params.set('band', String(Math.max(0, band - 1)));
       }
+      if (simulate) params.set('simulate', 'true');
       const res = await fetch(`${API_BASE}/api/v1/observations?${params.toString()}`);
       if (!res.ok) {
-        throw new Error(`Failed to query observations: ${res.statusText}`);
+        throw await readError(res, 'Failed to query observations');
       }
       const items: Observation[] = await res.json();
       return (items || []).map((obs) => {
@@ -79,10 +94,12 @@ export function useEpochs(
   dec: number,
   fov: number,
   band: number,
-  array?: DetectorArray | null
+  array?: DetectorArray | null,
+  simulate = false
 ) {
   return useQuery<EpochsResult>({
-    queryKey: ['epochs', ra, dec, fov, band, array],
+    queryKey: ['epochs', ra, dec, fov, band, array, simulate],
+    retry: 1,
     queryFn: async () => {
       const params = new URLSearchParams({
         ra: String(ra),
@@ -95,9 +112,10 @@ export function useEpochs(
       } else {
         params.set('band', String(Math.max(0, band - 1)));
       }
+      if (simulate) params.set('simulate', 'true');
       const res = await fetch(`${API_BASE}/api/v1/epochs?${params.toString()}`);
       if (!res.ok) {
-        throw new Error(`Failed to load archive epochs: ${res.statusText}`);
+        throw await readError(res, 'Failed to load archive epochs');
       }
       const data: EpochsResult = await res.json();
       if (Array.isArray(data.candidates)) {
@@ -106,6 +124,74 @@ export function useEpochs(
       return data;
     },
     enabled: Number.isFinite(ra) && Number.isFinite(dec),
+    staleTime: 30 * 60 * 1000,
+  });
+}
+
+export function useCombine(
+  ra: number,
+  dec: number,
+  fov: number,
+  band: number,
+  array: DetectorArray | null | undefined,
+  plus: number[],
+  minus: number[],
+  simulate: boolean,
+  enabled: boolean
+) {
+  return useQuery<CombineResult>({
+    queryKey: ['combine', ra, dec, fov, band, array, plus.join(','), minus.join(','), simulate],
+    retry: 1,
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        ra: String(ra),
+        dec: String(dec),
+        fov: String(fov),
+        plus: plus.join(','),
+      });
+      if (minus.length > 0) params.set('minus', minus.join(','));
+      if (array) params.set('array', array);
+      else params.set('band', String(Math.max(0, band - 1)));
+      if (simulate) params.set('simulate', 'true');
+      const res = await fetch(`${API_BASE}/api/v1/epochs/combine?${params.toString()}`);
+      if (!res.ok) throw await readError(res, 'Failed to combine epochs');
+      return res.json();
+    },
+    enabled: enabled && plus.length > 0 && Number.isFinite(ra) && Number.isFinite(dec),
+    staleTime: 30 * 60 * 1000,
+  });
+}
+
+export function useFalseColor(
+  ra: number,
+  dec: number,
+  fov: number,
+  red: string,
+  green: string,
+  blue: string,
+  epoch: number | null,
+  simulate: boolean,
+  enabled: boolean
+) {
+  return useQuery<FalseColorResult>({
+    queryKey: ['falsecolor', ra, dec, fov, red, green, blue, epoch, simulate],
+    retry: 1,
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        ra: String(ra),
+        dec: String(dec),
+        fov: String(fov),
+        red,
+        green,
+        blue,
+      });
+      if (epoch !== null) params.set('epoch', String(epoch));
+      if (simulate) params.set('simulate', 'true');
+      const res = await fetch(`${API_BASE}/api/v1/falsecolor?${params.toString()}`);
+      if (!res.ok) throw await readError(res, 'Failed to build the false-colour image');
+      return res.json();
+    },
+    enabled: enabled && Number.isFinite(ra) && Number.isFinite(dec),
     staleTime: 30 * 60 * 1000,
   });
 }
@@ -139,7 +225,7 @@ export function useComparison(obsAId: string | null, obsBId: string | null, band
         `${API_BASE}/api/v1/compare?obs_a=${encodeURIComponent(obsAId!)}&obs_b=${encodeURIComponent(obsBId!)}&band=${band}`
       );
       if (!res.ok) {
-        throw new Error(`Failed to compare observations: ${res.statusText}`);
+        throw await readError(res, 'Failed to compare observations');
       }
       const data = await res.json();
       return normalizeComparison(data);

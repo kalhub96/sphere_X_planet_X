@@ -42,6 +42,7 @@ class FixtureArchive:
         radius_deg: float,
         band: int | None = None,
         array: str | None = None,
+        simulate: bool = False,
     ) -> list[Observation]:
         band_index = 85 if array == "D6" else (band if band is not None else 50)
         return [

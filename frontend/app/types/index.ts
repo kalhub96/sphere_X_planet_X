@@ -56,6 +56,39 @@ export interface EpochFrame {
 
 export type DataSource = 'live' | 'mixed' | 'simulated';
 
+export interface CombineResult {
+  ra: number;
+  dec: number;
+  fov: number;
+  plus: number[];
+  minus: number[];
+  kind: 'stack' | 'difference';
+  label: string;
+  image_b64: string;
+  data_source?: DataSource;
+  is_simulated?: boolean;
+}
+
+export interface FalseColorChannel {
+  channel: 'red' | 'green' | 'blue';
+  array: string;
+  wavelength_min_um: number;
+  wavelength_max_um: number;
+  n_exposures: number;
+}
+
+export interface FalseColorResult {
+  ra: number;
+  dec: number;
+  fov: number;
+  epoch_index: number;
+  obs_date: string;
+  image_b64: string;
+  channels: FalseColorChannel[];
+  data_source?: DataSource;
+  is_simulated?: boolean;
+}
+
 export interface EpochsResult {
   ra: number;
   dec: number;
@@ -70,6 +103,8 @@ export interface EpochsResult {
   /** "live" = all frames from the SPHEREx archive; "mixed"/"simulated" = demo data involved. */
   data_source?: DataSource;
   is_simulated?: boolean;
+  /** Epochs that could not be downloaded; the frames shown are still real. */
+  warnings?: string[];
 }
 
 export interface Candidate {

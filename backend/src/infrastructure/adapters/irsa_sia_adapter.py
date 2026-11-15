@@ -58,11 +58,9 @@ class IRSASIAAdapter:
         self,
         sia2_url: str = "https://irsa.ipac.caltech.edu/SIA",
         database_url: str = "sqlite+aiosqlite:///./data/skytrace.db",
-        timeout: float = 3.5,
+        timeout: float = 30.0,
         collections: tuple[str, str] = ("spherex_dr1", "spherex_qr3"),
-        allow_simulation: bool = True,
     ) -> None:
-        self._allow_simulation = allow_simulation
         self._url = sia2_url
         self._database_url = database_url
         self._timeout = timeout
@@ -77,7 +75,13 @@ class IRSASIAAdapter:
         radius_deg: float,
         band: int | None = None,
         array: str | None = None,
+        simulate: bool = False,
     ) -> list[Observation]:
+        """Find SPHEREx observations covering a position.
+
+        Real archive results only, unless the caller explicitly asks for the
+        scripted demo sky with ``simulate=True`` (the user's Demo-mode choice).
+        """
         if not (0.0 <= ra <= 360.0 and -90.0 <= dec <= 90.0):
             raise ValueError(f"Invalid celestial coordinates: ra={ra}, dec={dec}")
         if radius_deg <= 0.0 or radius_deg > 5.0:
@@ -87,9 +91,14 @@ class IRSASIAAdapter:
         if array is not None and array not in DETECTOR_ARRAY_BANDS:
             raise ValueError("array must be one of D1, D2, D3, D4, D5, D6")
 
-        cache_key = f"{ra:.4f}_{dec:.4f}_{radius_deg:.4f}_{band}_{array}"
+        cache_key = f"{ra:.4f}_{dec:.4f}_{radius_deg:.4f}_{band}_{array}_{'sim' if simulate else 'live'}"
         if cache_key in self._cache:
             return self._cache[cache_key]
+
+        if simulate:
+            demo = self._simulated_observations(ra, dec, radius_deg, band, array)
+            self._cache[cache_key] = demo
+            return demo
 
         rows: list[tuple[str, Mapping[str, Any]]] = []
         errors: list[Exception] = []
@@ -130,53 +139,12 @@ class IRSASIAAdapter:
                 continue
             observations.append(observation)
 
-        # Offline demo fallback: only when the live archive returned fewer than
-        # 2 observations AND simulation is enabled. Every record produced here
-        # is flagged ``is_simulated=True`` so the API and UI can label it.
-        if len(observations) < 2 and not self._allow_simulation:
-            if errors and not observations:
-                raise IRSAError(
-                    "SPHEREx archive (IRSA) could not be reached and simulated "
-                    "data is disabled (ALLOW_SIMULATED_DATA=false)."
-                ) from errors[0]
-        elif len(observations) < 2:
-            logger.warning(
-                "IRSA returned %d observation(s) for ra=%.4f dec=%.4f; "
-                "adding SIMULATED demo epochs.",
-                len(observations),
-                ra,
-                dec,
-            )
-            epochs = [
-                (60430.0, date(2025, 5, 15), "dr1", 1),
-                (60613.0, date(2025, 11, 14), "dr1", 2),
-                (60796.0, date(2026, 5, 16), "qr3", 3),
-            ]
-            target_bands = (
-                DETECTOR_ARRAY_BANDS[array]
-                if array and array in DETECTOR_ARRAY_BANDS
-                else ([band] if band is not None else [10, 26, 43, 60, 77, 94])
-            )
-            for mjd, dt, release, pass_num in epochs:
-                for b_idx in target_bands:
-                    wl = SPHEREX_WAVELENGTHS[b_idx]
-                    obs_id = f"spherex_{release}_{ra:.4f}_{dec:.4f}_pass{pass_num}_b{b_idx}"
-                    fits_url = f"https://irsa.ipac.caltech.edu/ibe/data/spherex/{release}?center={ra:.5f},{dec:.5f}d&size={radius_deg*2:.4f}&band={b_idx}&pass={pass_num}"
-                    obs = Observation(
-                        id=obs_id,
-                        region_id=f"{ra:.4f}_{dec:.4f}",
-                        epoch_mjd=mjd,
-                        band_index=b_idx,
-                        wavelength_um=wl,
-                        fits_url=fits_url,
-                        quality_pct=98.0,
-                        data_release=release,
-                        obs_date=dt,
-                        ra=ra,
-                        dec=dec,
-                        is_simulated=True,
-                    )
-                    observations.append(obs)
+        # No silent substitution: if every collection failed, say so.
+        if errors and not rows:
+            raise IRSAError(
+                "The SPHEREx archive (IRSA) could not be reached or did not answer in time. "
+                f"Please try again. ({errors[0]})"
+            ) from errors[0]
 
         observations.sort(
             key=lambda observation: (
@@ -185,11 +153,54 @@ class IRSASIAAdapter:
                 observation.id,
             )
         )
-        self._cache[cache_key] = observations
+        if observations:
+            self._cache[cache_key] = observations
         for obs in observations:
             self._mem_obs[obs.id] = obs
         await asyncio.gather(*(self._save_to_db(observation) for observation in observations))
         return observations
+
+    def _simulated_observations(
+        self,
+        ra: float,
+        dec: float,
+        radius_deg: float,
+        band: int | None,
+        array: str | None,
+    ) -> list[Observation]:
+        """Scripted demo sky for Demo mode. Every record is flagged is_simulated."""
+        epochs = [
+            (60810.0, date(2025, 5, 15), "dr1", 1),
+            (60993.0, date(2025, 11, 14), "dr1", 2),
+            (61176.0, date(2026, 5, 16), "qr3", 3),
+        ]
+        target_bands = (
+            DETECTOR_ARRAY_BANDS[array]
+            if array and array in DETECTOR_ARRAY_BANDS
+            else ([band] if band is not None else [10, 26, 43, 60, 77, 94])
+        )
+        demo: list[Observation] = []
+        for mjd, dt, release, pass_num in epochs:
+            for b_idx in target_bands:
+                obs_id = f"spherex_{release}_{ra:.4f}_{dec:.4f}_pass{pass_num}_b{b_idx}"
+                demo.append(
+                    Observation(
+                        id=obs_id,
+                        region_id=f"{ra:.4f}_{dec:.4f}",
+                        epoch_mjd=mjd,
+                        band_index=b_idx,
+                        wavelength_um=SPHEREX_WAVELENGTHS[b_idx],
+                        fits_url="",
+                        quality_pct=98.0,
+                        data_release=release,
+                        obs_date=dt,
+                        ra=ra,
+                        dec=dec,
+                        is_simulated=True,
+                    )
+                )
+        demo.sort(key=lambda o: (o.epoch_mjd, o.band_index, o.id))
+        return demo
 
     async def _fetch_collection(
         self,

@@ -25,9 +25,6 @@ services:
       IRSA_IBE_URL: "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1"
       IRSA_MOST_URL: "https://irsa.ipac.caltech.edu/applications/MOST"
       LOG_LEVEL: "INFO"
-      # Set to "false" to return an honest error instead of labelled demo data
-      # when the SPHEREx archive is slow or unreachable.
-      ALLOW_SIMULATED_DATA: "true"
     volumes:
       - ./backend:/app
       - ./backend/data:/app/data

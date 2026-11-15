@@ -19,10 +19,12 @@ Built for the **2026 NASA Space Apps Challenge: "Planet X and SPHEREx"**.
 | --- | --- |
 | **Coordinate input** | Decimal degrees (`133.7951, -7.2451`) or sexagesimal (`08h55m10.831s, -7d14m42.53s`), plus name lookup. |
 | **Time-series "video"** | Plays every SPHEREx epoch for the patch with play/pause, adjustable FPS and a frame scrubber. |
-| **Viewing modes** | Video loop, Blink (A/B), Split slider, Difference (Epoch N − Epoch 1) and False colour. |
+| **Viewing modes** | Video loop, Blink (A/B), Split slider, Difference (Epoch N − Epoch 1), **Add / subtract epochs** and **False colour (3 real bands)**. |
+| **Add / subtract epochs** | Tick which epochs to add (median stack) and which to subtract; the result is a signal-to-noise difference image (red = brighter in the added set, blue = brighter in the subtracted set). |
+| **False colour** | Three detector arrays of one epoch become red / green / blue (default D6 / D3 / D1, i.e. long → short wavelength), so colour means real wavelength. |
 | **Detector arrays & bands** | Pick one of the 102 bands, or stack a whole detector array (D1–D6, 0.75–5.0 µm) to improve signal-to-noise. |
-| **Field of view** | Presets from 0.05° to 0.50°. Larger fields keep fast movers in frame at the cost of longer downloads. |
-| **Shareable URLs** | `?ra=&dec=&fov=&array=&band=&mode=` restores the exact view, so it can be embedded or shared. |
+| **Field of view** | Any value from 0.01° to 1.0°, typed in or picked from presets. Larger fields keep fast movers in frame at the cost of longer downloads. |
+| **Shareable URLs** | `?ra=&dec=&fov=&array=&band=&mode=&plus=&minus=&demo=` restores the exact view, so it can be embedded or shared. |
 | **Cross-mission overlay** | Aladin Lite panel showing Gaia DR3 sources over 2010–2014 unWISE infrared imagery. |
 | **Quality metadata** | Per-frame clean-pixel percentage and flagged-pixel counts from the FITS `FLAGS` plane. |
 | **Candidates & evidence** | Difference-image source detection, confidence scoring, Solar System (MOST) cross-match and an evidence panel with caveats. |
@@ -35,28 +37,21 @@ without code changes.
 
 ---
 
-## Data honesty: real vs. simulated
+## Data honesty: real by default, demo only when you ask
 
-SkyTrace shows **real SPHEREx data whenever the IRSA archive responds in time**.
+SkyTrace shows **real SPHEREx data from the IRSA archive**. It never substitutes made-up
+images because the archive is slow.
 
-If the archive is slow, unreachable, or returns too few observations, the backend can fall back to an
-**offline demo mode** that generates synthetic observations and images (random noise plus
-scripted moving/variable sources for the five benchmark targets). Demo data is **never**
-silently mixed in:
-
-- every simulated observation and frame carries `is_simulated: true` in the API;
-- `GET /api/v1/epochs` returns `data_source` = `"live"`, `"mixed"` or `"simulated"`;
-- the UI shows an amber **“Simulated demo data — not real SPHEREx images”** banner and a
-  **SIMULATED** badge on each affected frame;
-- simulated records are never written to the database, and simulated responses are cached for
-  only 5 minutes so real data replaces them as soon as the archive is back.
-
-To turn the fallback **off** (recommended for any scientific use) and get an honest `503` error
-instead, set the environment variable:
-
-```bash
-ALLOW_SIMULATED_DATA=false
-```
+- If IRSA is slow or unreachable you get a clear error (HTTP `503`) with a **Try again** button,
+  not fake frames. Slow requests are given a generous timeout (30 s for the search, 60 s per
+  cutout, one retry) and cached once they succeed.
+- If only some epochs can be downloaded, the real ones are shown and the missing ones are listed
+  in a `warnings` list on screen. Nothing is filled in.
+- **Demo mode** is an opt-in checkbox in the viewer (URL `demo=1`, API `simulate=true`). It plays
+  a scripted simulated sky for the five benchmark targets so the interface can be tried without
+  the archive. While it is on, a banner says *“Demo mode · simulated sky, not real SPHEREx
+  images”*, every frame is badged, and `is_simulated: true` / `data_source: "simulated"` appear in
+  the API. Simulated data is never written to the database.
 
 ---
 
@@ -105,7 +100,8 @@ Frontend on port 3000, backend on port 8000, Redis on 6379.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Backend URL used by the frontend. |
-| `ALLOW_SIMULATED_DATA` | `true` | Allow the labelled offline demo fallback. Set `false` to disable it. |
+| `IRSA_QUERY_TIMEOUT_SECONDS` | `30` | How long to wait for IRSA to answer a search. |
+| `IRSA_CUTOUT_TIMEOUT_SECONDS` | `60` | How long to wait for each FITS cutout download. |
 | `IRSA_SIA2_URL` | `https://irsa.ipac.caltech.edu/SIA` | IRSA SIA2 service. |
 | `REDIS_URL` | `redis://localhost:6379` | Optional cache. |
 | `DATABASE_URL` | `sqlite+aiosqlite:///./data/skytrace.db` | Observation / candidate store. |
@@ -118,15 +114,18 @@ Frontend on port 3000, backend on port 8000, Redis on 6379.
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /api/v1/observations?ra=&dec=&fov=&band=&array=` | SPHEREx exposures covering a position. |
-| `GET /api/v1/epochs?ra=&dec=&fov=&band=&array=&stretch=` | Chronological frames (PNG), difference image, candidates, `data_source`. |
+| `GET /api/v1/epochs?ra=&dec=&fov=&band=&array=&stretch=&simulate=` | Chronological frames (PNG), difference image, candidates, `data_source`, `warnings`. |
+| `GET /api/v1/epochs/combine?ra=&dec=&fov=&plus=1,2&minus=3&array=` | Add and/or subtract epochs you choose; returns a stack or a difference image. |
+| `GET /api/v1/falsecolor?ra=&dec=&fov=&red=D6&green=D3&blue=D1&epoch=` | Real three-band RGB composite from one epoch. |
 | `GET /api/v1/compare?obs_a=&obs_b=&band=` | Two-observation comparison with difference image and candidates. |
 | `GET /api/v1/candidates/{id}/evidence` | Plain-language evidence, measurements and caveats. |
 | `GET /api/v1/candidates/{id}/sed` | Template spectrum for a candidate (illustrative, see below). |
 | `GET /api/v1/most-check?ra=&dec=&epoch_mjd=` | Solar System cross-match (IRSA MOST). |
 | `GET /api/v1/wavelengths` | The 102 SPHEREx bands and detector arrays. |
 
-URL parameters for the viewer: `ra`, `dec` (degrees), `fov` (0.05, 0.08, 0.15, 0.25, 0.5),
-`array` (`D1`–`D6` or `single`), `band` (0–101), `mode` (`video`, `blink`, `slider`, `difference`, `false_color`).
+URL parameters for the viewer: `ra`, `dec` (degrees), `fov` (degrees, 0.01–1.0),
+`array` (`D1`–`D6` or `single`), `band` (0–101), `mode` (`video`, `blink`, `slider`, `difference`, `combine`, `false_color`),
+`plus` / `minus` (epoch numbers, e.g. `plus=3&minus=1`), `demo=1` (Demo mode).
 
 Example: `http://localhost:3000/compare?ra=133.7951&dec=-7.2451&fov=0.08&array=D6&mode=difference`
 
@@ -166,12 +165,14 @@ Tests: `cd backend && pytest`. Type-check the frontend: `cd frontend && npx tsc 
 
 ## Known limitations
 
-- **Demo fallback:** see *Data honesty*. Verify a demo of the five targets shows
-  `data_source: "live"` before presenting results as real observations.
-- **False-colour view** is illustrative; it is not yet built from three independent real bands.
-- **Spectrum (SED) plot** currently shows generated template spectra, labelled
-  *“Illustrative · not measured”*, rather than photometry measured from the images.
-- **Field of view** is limited to the preset values.
+- **Live archive path:** the real-data code was developed and tested against recorded fixtures,
+  not against the live IRSA service. Before presenting results, open WISE 0855 with Demo mode
+  **off** and confirm real frames and `data_source: "live"`.
+- **Spectrum (SED) plot** shows generated template spectra, labelled *“Illustrative · not
+  measured”*, rather than photometry measured from the images.
+- **Band → wavelength table** is a log-spaced approximation of the 102 SPHEREx bands, not the
+  per-pixel wavelength map from the FITS headers.
+- **Demo mode** is a scripted simulation, not a prediction of what SPHEREx will see.
 - Automated detections are a starting point for human inspection, not confirmed discoveries.
 
 ---

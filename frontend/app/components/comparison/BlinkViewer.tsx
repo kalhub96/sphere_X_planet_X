@@ -40,6 +40,16 @@ interface BlinkViewerProps {
   imageBBase64?: string;
   differenceBase64?: string | null;
   falseColorBase64?: string | null;
+  /** Image for the Add / subtract view (stack or difference of epochs the user picked). */
+  combineBase64?: string | null;
+  /** Caption describing the false-colour channels, e.g. "R D6 · G D3 · B D1 · epoch 3". */
+  falseColorCaption?: string | null;
+  /** Caption describing the add / subtract result, e.g. "(E3) − (E1)". */
+  combineCaption?: string | null;
+  /** Shown over the canvas when the current view has nothing to draw yet (loading, error, or a hint). */
+  statusMessage?: string | null;
+  /** True when the image in the current view is simulated Demo-mode data. */
+  simulatedOverlay?: boolean;
   frames?: ViewerFrame[];
   candidates: Candidate[];
   selectedCandidateId?: string | null;
@@ -72,6 +82,11 @@ export default function BlinkViewer({
   imageBBase64 = '',
   differenceBase64,
   falseColorBase64,
+  combineBase64,
+  falseColorCaption,
+  combineCaption,
+  statusMessage,
+  simulatedOverlay = false,
   frames,
   candidates,
   selectedCandidateId = null,
@@ -85,6 +100,7 @@ export default function BlinkViewer({
   const imagesRef = useRef<HTMLImageElement[]>([]);
   const diffRef = useRef<HTMLImageElement | null>(null);
   const falseColorRef = useRef<HTMLImageElement | null>(null);
+  const combineRef = useRef<HTMLImageElement | null>(null);
   const [ready, setReady] = useState(false);
   const [viewMode, setViewMode] = useState<BlinkViewMode>(mode);
   const [frameIndex, setFrameIndex] = useState(0);
@@ -124,6 +140,7 @@ export default function BlinkViewer({
       ...timeline.map((frame) => frame.imageB64),
       differenceBase64 ?? '',
       falseColorBase64 ?? '',
+      combineBase64 ?? '',
     ].filter(Boolean);
     if (resources.length === 0) return;
     let loaded = 0;
@@ -157,7 +174,16 @@ export default function BlinkViewer({
     } else {
       falseColorRef.current = null;
     }
-  }, [differenceBase64, falseColorBase64, timeline]);
+    if (combineBase64) {
+      const image = new Image();
+      image.onload = onSettled;
+      image.onerror = onSettled;
+      image.src = imageSource(combineBase64);
+      combineRef.current = image;
+    } else {
+      combineRef.current = null;
+    }
+  }, [combineBase64, differenceBase64, falseColorBase64, timeline]);
 
   const activeFrame = timeline[frameIndex];
   const draw = useCallback(() => {
@@ -184,8 +210,13 @@ export default function BlinkViewer({
     if (viewMode === 'difference' && (diffRef.current ?? last)) {
       context.drawImage(diffRef.current ?? last, 0, 0, width, height);
     }
-    if (viewMode === 'false_color' && (falseColorRef.current ?? last)) {
-      context.drawImage(falseColorRef.current ?? last, 0, 0, width, height);
+    // These two views only ever show their own computed image. Until it exists the
+    // canvas stays empty (the status message explains why) instead of showing a different frame.
+    if (viewMode === 'false_color' && falseColorRef.current) {
+      context.drawImage(falseColorRef.current, 0, 0, width, height);
+    }
+    if (viewMode === 'combine' && combineRef.current) {
+      context.drawImage(combineRef.current, 0, 0, width, height);
     }
     if (viewMode === 'slider') {
       const splitX = split * width;
@@ -282,7 +313,8 @@ export default function BlinkViewer({
     { id: 'blink', label: 'A / B blink' },
     { id: 'slider', label: 'Split slider' },
     { id: 'difference', label: 'N − 1 difference' },
-    { id: 'false_color', label: 'False color' },
+    { id: 'combine', label: 'Add / subtract' },
+    { id: 'false_color', label: 'False color (3 bands)' },
   ];
 
   return (
@@ -347,25 +379,38 @@ export default function BlinkViewer({
             setZoom((value) => Math.max(0.5, Math.min(8, value * (event.deltaY < 0 ? 1.15 : 0.87))));
           }}
         />
-        {displayFrame && (
-          <div className="absolute left-3 top-3 rounded border border-[var(--accent-cyan)] bg-[#060810cc] px-2 py-1 text-[11px] font-mono text-[var(--accent-cyan)]">
-            Epoch {viewMode === 'video' ? frameIndex + 1 : blinkA ? 1 : timeline.length} / {timeline.length} · {displayFrame.label}
-          </div>
+        {viewMode === 'combine' || viewMode === 'false_color' ? (
+          (viewMode === 'combine' ? combineCaption : falseColorCaption) && (
+            <div className="absolute left-3 top-3 rounded border border-[var(--accent-cyan)] bg-[#060810cc] px-2 py-1 text-[11px] font-mono text-[var(--accent-cyan)]">
+              {viewMode === 'combine' ? combineCaption : falseColorCaption}
+            </div>
+          )
+        ) : (
+          displayFrame && (
+            <div className="absolute left-3 top-3 rounded border border-[var(--accent-cyan)] bg-[#060810cc] px-2 py-1 text-[11px] font-mono text-[var(--accent-cyan)]">
+              Epoch {viewMode === 'video' ? frameIndex + 1 : blinkA ? 1 : timeline.length} / {timeline.length} · {displayFrame.label}
+            </div>
+          )
         )}
-        {activeFrame?.flags && (
+        {activeFrame?.flags && viewMode !== 'combine' && viewMode !== 'false_color' && (
           <div className="absolute right-3 top-3 rounded border border-[var(--border-subtle)] bg-[#060810cc] px-2 py-1 text-[10px] font-mono text-[var(--text-secondary)]">
             Clean {activeFrame.flags.clean_pct.toFixed(1)}% · Flags {activeFrame.flags.bad_px}
           </div>
         )}
-        {(activeFrame?.isSimulated || displayFrame?.isSimulated) && (
+        {(simulatedOverlay || ((viewMode === 'combine' || viewMode === 'false_color') ? false : (activeFrame?.isSimulated || displayFrame?.isSimulated))) && (
           <div
             data-testid="simulated-frame-badge"
             className="absolute bottom-3 right-3 rounded border border-amber-400 bg-amber-400/90 px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wide text-[#060810]"
           >
-            Simulated · not SPHEREx data
+            Demo mode · simulated, not SPHEREx data
           </div>
         )}
-        {!ready && <div className="absolute inset-0 grid place-items-center text-xs font-mono text-[var(--text-secondary)]">Loading archive frames…</div>}
+        {!ready && timeline.length > 0 && <div className="absolute inset-0 grid place-items-center text-xs font-mono text-[var(--text-secondary)]">Loading archive frames…</div>}
+        {(ready || timeline.length === 0) && statusMessage && (
+          <div className="absolute inset-0 grid place-items-center p-6 text-center text-xs font-mono text-[var(--text-secondary)]" data-testid="viewer-status">
+            {statusMessage}
+          </div>
+        )}
         {hovered && (
           <div className="absolute bottom-3 left-3 max-w-xs rounded border border-[var(--accent-gold)] bg-[#060810dd] p-2 text-[10px] font-mono text-[var(--text-primary)]">
             <div className="font-bold text-[var(--accent-gold)]">{hovered.classification}</div>

@@ -17,7 +17,7 @@
 ---
 
 ## Benchmark Validation Results
-> **Data provenance:** these figures are only valid for a run where `GET /api/v1/epochs` reports `data_source: "live"`. If the SPHEREx archive is unreachable the app can show clearly labelled *simulated* demo frames instead; re-run `backend/scripts/verify_benchmarks.py` against the live archive and confirm before publishing these numbers.
+> **Data provenance:** these figures are only valid for a run where `GET /api/v1/epochs` reports `data_source: "live"`. If the SPHEREx archive is unreachable the app returns an error; simulated frames appear only when Demo mode is switched on by the user; re-run `backend/scripts/verify_benchmarks.py` against the live archive and confirm before publishing these numbers.
 
 | Benchmark Target | Coordinates (ICRS & Sexagesimal) | Epochs Verified | Optimal Detector | Verified Signature & Latency |
 | :--- | :--- | :--- | :--- | :--- |

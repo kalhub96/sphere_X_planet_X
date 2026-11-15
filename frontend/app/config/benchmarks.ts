@@ -12,6 +12,10 @@ export interface BenchmarkPreset {
 
 export const FOV_PRESETS = [0.05, 0.08, 0.15, 0.25, 0.5] as const;
 
+/** Any field of view in this range (degrees) is accepted, not only the presets. */
+export const FOV_MIN = 0.01;
+export const FOV_MAX = 1.0;
+
 export const DETECTOR_ARRAYS: ReadonlyArray<{
   id: DetectorArray;
   label: string;

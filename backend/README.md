@@ -18,10 +18,12 @@ Interactive API docs: <http://localhost:8000/docs>. Redis is optional (in-memory
 
 ## Real vs. simulated data
 
-If IRSA is slow or unreachable the service can return a **labelled offline demo**
-(`is_simulated: true` on observations/frames, `data_source` on `/api/v1/epochs`).
-Disable it with `ALLOW_SIMULATED_DATA=false` to get a `503` instead. Simulated records are
-never stored in the database. See the root README for details.
+The service returns real IRSA data or an honest error (`503` if the archive cannot be reached,
+`404` if nothing covers the position). It never falls back to fake data on its own. Passing
+`simulate=true` on `/observations`, `/epochs`, `/epochs/combine` or `/falsecolor` explicitly
+requests the scripted demo sky; those frames carry `is_simulated: true` and are never stored in
+the database. Timeouts are set with `IRSA_QUERY_TIMEOUT_SECONDS` and `IRSA_CUTOUT_TIMEOUT_SECONDS`.
+See the root README for details.
 
 ## Test
 

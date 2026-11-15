@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { Observation, Candidate } from '../types';
 import type { DetectorArray } from '../config/benchmarks';
 
-export type InvestigationMode = 'video' | 'blink' | 'slider' | 'difference' | 'false_color';
+export type InvestigationMode = 'video' | 'blink' | 'slider' | 'difference' | 'combine' | 'false_color';
+
+export type CombineRole = 'plus' | 'minus' | 'off';
 
 export interface HoveredSkyObject {
   name: string;
@@ -24,6 +26,14 @@ export interface SkyState {
   selectedArray: DetectorArray | null;
   investigationMode: InvestigationMode;
   activePresetName: string | null;
+  /**
+   * Demo mode: the user explicitly asked for a scripted, simulated sky.
+   * Off by default; real SPHEREx data is never replaced by simulated data otherwise.
+   */
+  simulate: boolean;
+  /** Survey epochs (1-based) added / subtracted in the Add / subtract view. */
+  combinePlus: number[];
+  combineMinus: number[];
 
   // Multi-epoch Observations
   observations: Observation[];
@@ -41,6 +51,9 @@ export interface SkyState {
   setSelectedBand: (band: number) => void;
   setSelectedArray: (array: DetectorArray | null) => void;
   setInvestigationMode: (mode: InvestigationMode) => void;
+  setSimulate: (simulate: boolean) => void;
+  setCombine: (plus: number[], minus: number[]) => void;
+  setCombineRole: (epoch: number, role: CombineRole) => void;
   setObservations: (obs: Observation[]) => void;
   selectObsA: (obs: Observation | null) => void;
   selectObsB: (obs: Observation | null) => void;
@@ -58,6 +71,9 @@ export const useSkyStore = create<SkyState>((set) => ({
   selectedArray: null,
   investigationMode: 'video',
   activePresetName: 'Orion Nebula (M42)',
+  simulate: false,
+  combinePlus: [],
+  combineMinus: [],
 
   observations: [],
   selectedObsA: null,
@@ -78,6 +94,16 @@ export const useSkyStore = create<SkyState>((set) => ({
   setSelectedBand: (selectedBand) => set({ selectedBand }),
   setSelectedArray: (selectedArray) => set({ selectedArray }),
   setInvestigationMode: (investigationMode) => set({ investigationMode }),
+  setSimulate: (simulate) => set({ simulate }),
+  setCombine: (combinePlus, combineMinus) => set({ combinePlus, combineMinus }),
+  setCombineRole: (epoch, role) =>
+    set((state) => {
+      const plus = state.combinePlus.filter((n) => n !== epoch);
+      const minus = state.combineMinus.filter((n) => n !== epoch);
+      if (role === 'plus') plus.push(epoch);
+      if (role === 'minus') minus.push(epoch);
+      return { combinePlus: plus.sort((a, b) => a - b), combineMinus: minus.sort((a, b) => a - b) };
+    }),
   setObservations: (observations) => set({ observations }),
   selectObsA: (selectedObsA) => set({ selectedObsA }),
   selectObsB: (selectedObsB) => set({ selectedObsB }),

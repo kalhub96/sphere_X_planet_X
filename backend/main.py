@@ -6,6 +6,8 @@ from src.infrastructure.config import settings
 from src.infrastructure.db.session import create_tables
 from src.infrastructure.api.v1.routers.observations import router as obs_router
 from src.infrastructure.api.v1.routers.epochs import router as epochs_router
+from src.infrastructure.api.v1.routers.combine import router as combine_router
+from src.infrastructure.api.v1.routers.falsecolor import router as falsecolor_router
 from src.infrastructure.api.v1.routers.compare import router as compare_router
 from src.infrastructure.api.v1.routers.candidates import router as candidates_router
 from src.infrastructure.api.v1.routers.wavelengths import router as wavelengths_router
@@ -33,6 +35,8 @@ app.add_middleware(
 
 app.include_router(obs_router)
 app.include_router(epochs_router)
+app.include_router(combine_router)
+app.include_router(falsecolor_router)
 app.include_router(compare_router)
 app.include_router(candidates_router)
 app.include_router(wavelengths_router)

@@ -16,6 +16,7 @@ from astropy.visualization import (
     LogStretch,
     PercentileInterval,
     ZScaleInterval,
+    make_lupton_rgb,
 )
 from astropy.wcs import WCS
 from photutils.detection import DAOStarFinder
@@ -141,10 +142,12 @@ class NumpyImageProcessor:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             coadded_data = np.nanmedian(stack_arr, axis=0).astype(np.float32)
-            # Fill any all-nan pixels with median background
+            # Fill pixels that had no valid exposure
             nan_mask = np.isnan(coadded_data)
             if np.any(nan_mask):
-                coadded_data[nan_mask] = 12.0
+                # Pixels with no valid exposure take the image's own median level.
+                finite = coadded_data[~nan_mask]
+                coadded_data[nan_mask] = float(np.median(finite)) if finite.size else 0.0
 
         coadded_var = (np.mean(var_stack, axis=0) / len(images)).astype(np.float32)
 
@@ -376,3 +379,62 @@ class NumpyImageProcessor:
         buf = io.BytesIO()
         img.save(buf, format="PNG", optimize=True)
         return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+    async def combine_epochs(
+        self, plus: list[FITSImage], minus: list[FITSImage]
+    ) -> tuple[str, str]:
+        """Add and subtract epochs the user picked.
+
+        Returns ``(png_base64, kind)``:
+          * only ``plus``  -> median stack of those epochs, kind ``"stack"``;
+          * ``plus`` and ``minus`` -> (stack of plus) - (stack of minus) as a
+            signal-to-noise difference image, kind ``"difference"``. Red means
+            brighter in the plus set, blue brighter in the minus set.
+        """
+        if not plus:
+            raise ValueError("At least one epoch is needed in the plus set")
+        stacked_plus = await self.coadd_detector_array(plus)
+        if not minus:
+            return await self.render_tile(stacked_plus, stretch="asinh"), "stack"
+        stacked_minus = await self.coadd_detector_array(minus)
+        # Put the minus stack on the plus stack's pixel grid, then B - A = plus - minus.
+        _, plus_aligned = await self.align(stacked_minus, stacked_plus)
+        _, snr_map = await self.subtract(stacked_minus, plus_aligned)
+        return await self.render_diff_tile(snr_map, colormap="diverging"), "difference"
+
+    async def render_rgb(self, red: FITSImage, green: FITSImage, blue: FITSImage) -> str:
+        """Three-band false-colour composite (Lupton asinh), all channels on one grid."""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None, self._render_rgb_sync, red.data, green.data, blue.data
+        )
+
+    def _render_rgb_sync(self, r_data: np.ndarray, g_data: np.ndarray, b_data: np.ndarray) -> str:
+        shape = (
+            min(r_data.shape[0], g_data.shape[0], b_data.shape[0]),
+            min(r_data.shape[1], g_data.shape[1], b_data.shape[1]),
+        )
+        channels = []
+        for data in (r_data, g_data, b_data):
+            clean = np.nan_to_num(data[: shape[0], : shape[1]], nan=np.nan)
+            background = float(np.nanmedian(clean)) if np.isfinite(clean).any() else 0.0
+            channels.append(np.nan_to_num(clean - background, nan=0.0))
+
+        # One shared stretch for all three channels keeps colours physically meaningful
+        # (a red source really is brighter at the long-wavelength band).
+        combined = np.concatenate([np.clip(c, 0, None).ravel() for c in channels])
+        scale = float(np.percentile(combined, 99.5)) if combined.size else 1.0
+        scale = max(scale, 1e-6)
+        rgb = make_lupton_rgb(
+            channels[0] / scale,
+            channels[1] / scale,
+            channels[2] / scale,
+            minimum=0.0,
+            stretch=0.5,
+            Q=8,
+        )
+        img = Image.fromarray(rgb, mode="RGB").resize((512, 512), Image.Resampling.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG", optimize=True)
+        return base64.b64encode(buf.getvalue()).decode("utf-8")
+

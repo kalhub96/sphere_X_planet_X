@@ -17,5 +17,3 @@ services:
         value: sqlite+aiosqlite:///./data/skytrace.db
       - key: LOG_LEVEL
         value: INFO
-      - key: ALLOW_SIMULATED_DATA
-        value: "true"

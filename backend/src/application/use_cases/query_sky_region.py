@@ -14,8 +14,9 @@ class QuerySkyRegionUC:
         radius_deg: float,
         band: int | None = None,
         array: str | None = None,
+        simulate: bool = False,
     ) -> list[Observation]:
-        key_data = f"{ra:.6f}:{dec:.6f}:{radius_deg:.4f}:{band}:{array}"
+        key_data = f"{ra:.6f}:{dec:.6f}:{radius_deg:.4f}:{band}:{array}:{'sim' if simulate else 'live'}"
         cache_key = "obs_meta:" + hashlib.sha256(key_data.encode()).hexdigest()[:16]
 
         cached = await self._cache.get(cache_key)
@@ -32,7 +33,7 @@ class QuerySkyRegionUC:
                 obs_list.append(Observation(**d))
             return obs_list
 
-        observations = await self._repo.search(ra, dec, radius_deg, band=band, array=array)
+        observations = await self._repo.search(ra, dec, radius_deg, band=band, array=array, simulate=simulate)
         
         # serialize to cache
         cacheable = []

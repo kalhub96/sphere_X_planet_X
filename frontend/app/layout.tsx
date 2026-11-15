@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-// @ts-expect-error: Global styles are handled by the Next.js build pipeline
 import './globals.css';
 import { Providers } from './providers';
 

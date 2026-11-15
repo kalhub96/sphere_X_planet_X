@@ -22,15 +22,15 @@ def get_sia_adapter() -> IRSASIAAdapter:
     return IRSASIAAdapter(
         settings.irsa_sia2_url,
         settings.database_url,
-        allow_simulation=settings.allow_simulated_data,
+        timeout=settings.irsa_query_timeout_seconds,
     )
 
 @lru_cache()
 def get_ibe_adapter() -> IRSAIBEAdapter:
     return IRSAIBEAdapter(
         settings.database_url,
+        timeout=settings.irsa_cutout_timeout_seconds,
         cache=get_cache(),
-        allow_simulation=settings.allow_simulated_data,
     )
 
 @lru_cache()

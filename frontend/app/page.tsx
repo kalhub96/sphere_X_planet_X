@@ -17,12 +17,15 @@ import {
   type MotionValue,
 } from 'framer-motion';
 import { Telescope, ArrowRight, Layers, ExternalLink, Search, Sparkles } from 'lucide-react';
+import { parseCoordinateInput } from './lib/astrometry';
 
 /* ---------- config ---------- */
 // Update via env var when a new SPHEREx release lands; no code change needed.
 const RELEASE = process.env.NEXT_PUBLIC_SPHEREX_RELEASE ?? 'Latest';
 
-const blinkUrl = (ra: number, dec: number, fov = 120) => `/compare?ra=${ra}&dec=${dec}&fov=${fov}`;
+/** `fov` is in arcseconds here; the viewer URL takes degrees. */
+const blinkUrl = (ra: number, dec: number, fov = 120) =>
+  `/compare?ra=${ra}&dec=${dec}&fov=${Number((fov / 3600).toFixed(4))}`;
 
 // Coordinates are approximate J2000: verify against SIMBAD before relying on them.
 // Movers: use a larger FOV so the source stays in frame across epochs.
@@ -303,12 +306,23 @@ function CoordForm() {
   const [ra, setRa] = useState('');
   const [dec, setDec] = useState('');
   const [fov, setFov] = useState('120');
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        const q = new URLSearchParams({ ra: ra.trim(), dec: dec.trim(), fov });
+        const parsed = parseCoordinateInput(`${ra.trim()}, ${dec.trim()}`);
+        if (!parsed) {
+          setError('Could not read those coordinates. Use degrees (133.795, -7.245) or hh:mm:ss / dd:mm:ss.');
+          return;
+        }
+        setError(null);
+        const q = new URLSearchParams({
+          ra: parsed.ra.toFixed(6),
+          dec: parsed.dec.toFixed(6),
+          fov: String(Number((Number(fov) / 3600).toFixed(4))),
+        });
         router.push(`/compare?${q.toString()}`);
       }}
       className={`mx-auto mt-8 max-w-3xl p-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto] text-left bg-[rgba(13,18,32,0.85)] ${PANEL} rounded-2xl`}
@@ -336,6 +350,7 @@ function CoordForm() {
       >
         <Search className="w-4 h-4" /> Blink
       </button>
+      {error && <p className="sm:col-span-4 text-xs text-[var(--danger)]">{error}</p>}
     </form>
   );
 }
