@@ -3,6 +3,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { parseRA, parseDec } from './lib/astrometry';
+import { FOV_PRESETS } from './config/benchmarks';
+
+// /compare takes degrees and only the preset FOVs; the landing form works in arcseconds.
+const nearestFov = (arcsec: number) =>
+  FOV_PRESETS.reduce((a, b) => (Math.abs(b - arcsec / 3600) < Math.abs(a - arcsec / 3600) ? b : a));
 import {
   motion,
   MotionConfig,
@@ -33,7 +39,7 @@ const TOKENS = {
 
 const RELEASE = process.env.NEXT_PUBLIC_SPHEREX_RELEASE ?? 'Latest';
 
-const blinkUrl = (ra: number, dec: number, fov = 120) => `/compare?ra=${ra}&dec=${dec}&fov=${fov}`;
+const blinkUrl = (ra: number, dec: number, fov = 120) => `/compare?ra=${ra}&dec=${dec}&fov=${nearestFov(fov)}`;
 
 // Coordinates are approximate J2000: verify against SIMBAD before relying on them.
 // Movers: use a larger FOV so the source stays in frame across epochs.
@@ -311,16 +317,23 @@ function CursorGlow() {
 /* ---------- coordinate form ---------- */
 function CoordForm() {
   const router = useRouter();
-  const [ra, setRa] = useState('');
-  const [dec, setDec] = useState('');
+  const [ra, setRa] = useState('08:55:10.831');
+  const [dec, setDec] = useState('-07:14:42.53');
   const [fov, setFov] = useState('120');
+  const [err, setErr] = useState('');
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        const q = new URLSearchParams({ ra: ra.trim(), dec: dec.trim(), fov });
-        router.push(`/compare?${q.toString()}`);
+        const r = parseRA(ra);
+        const d = parseDec(dec);
+        if (r === null || d === null) {
+          setErr('Could not read those coordinates. Try 08:55:10.831 / -07:14:42.53 or decimal degrees.');
+          return;
+        }
+        setErr('');
+        router.push(`/compare?ra=${r.toFixed(6)}&dec=${d.toFixed(6)}&fov=${nearestFov(Number(fov))}`);
       }}
       className={`mx-auto mt-8 max-w-3xl p-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto] text-left bg-[rgba(18,19,24,0.85)] ${PANEL} rounded-sm`}
     >
@@ -341,6 +354,7 @@ function CoordForm() {
           <option value="600">10′</option>
         </select>
       </label>
+      {err && <p className="sm:col-span-4 text-xs font-mono text-[var(--st-bad)]">{err}</p>}
       <button
         type="submit"
         className="self-end px-5 py-3 rounded-sm bg-[var(--st-gold)] text-[#0a0b0f] text-xs font-mono font-semibold uppercase tracking-[0.12em] hover:shadow-[0_0_16px_rgba(212,175,55,0.5)] transition-all flex items-center justify-center gap-2"

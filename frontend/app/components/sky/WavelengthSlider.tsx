@@ -20,8 +20,8 @@ export default function WavelengthSlider() {
   const currentWavelength = getSPHERExWavelength(selectedBand);
   const colorInfo = getWavelengthColor(currentWavelength);
 
-  // Spectral resolving power R: ranges from ~41 at 0.75 µm to ~135 at 4.5 µm
-  const resolvingPowerR = Math.round(41 + (currentWavelength - 0.75) * 22);
+  // Resolving power per detector array (arXiv:2602.09139 Table 1): D1-D3 41, D4 35, D5 110, D6 125
+  const resolvingPowerR = [41, 41, 41, 35, 110, 125][Math.min(5, Math.floor((selectedBand - 1) / 17))];
 
   return (
     <div className="glass-panel p-4 backdrop-blur-md">

@@ -35,28 +35,28 @@ export default function ExplorePage() {
     <div className="relative w-screen h-screen overflow-hidden bg-[#0a0b0f] text-[#F3EEE0]">
       {/* 1. Global Navigation Bar */}
       <header className="absolute top-0 left-0 right-0 z-30 px-6 py-3 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[rgba(10,11,15,0.7)] backdrop-blur-md">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Link
             href="/"
             className="flex items-center gap-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Home</span>
+            <span className="hidden sm:inline">Home</span>
           </Link>
           <div className="h-4 w-[1px] bg-[var(--border-subtle)]" />
           <div className="flex items-center gap-2">
             <Telescope className="w-5 h-5 text-[var(--accent-cyan)]" />
-            <h1 className="st-serif text-2xl font-normal tracking-tight leading-none bg-gradient-to-r from-white to-[var(--accent-cyan)] bg-clip-text text-transparent">
+            <h1 className="st-serif text-lg sm:text-2xl whitespace-nowrap font-normal tracking-tight leading-none bg-gradient-to-r from-white to-[var(--accent-cyan)] bg-clip-text text-transparent">
               SkyTrace Celestial Explorer
             </h1>
           </div>
         </div>
 
         {/* Live Data Status Indicator */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[rgba(212,175,55,0.08)] border border-[rgba(212,175,55,0.25)] text-xs text-[var(--accent-cyan)] font-mono">
             <span className="w-2 h-2 rounded-full bg-[var(--accent-cyan)] animate-pulse" />
-            NASA IRSA SPHEREx QR3 Live Archive
+            NASA IRSA SPHEREx QR3 Archive
           </div>
           <button
             onClick={() => {
@@ -77,7 +77,7 @@ export default function ExplorePage() {
             className="px-3 py-1.5 rounded-sm bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-primary)] transition-all flex items-center gap-1.5"
           >
             <Layers className="w-3.5 h-3.5 text-[var(--accent-orange)]" />
-            Blink Comparator
+            <span><span className="hidden sm:inline">Blink </span>Comparator</span>
           </Link>
         </div>
       </header>
