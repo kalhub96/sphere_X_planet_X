@@ -17,8 +17,7 @@ async def timelapse(
     max_frames: int = Query(24, ge=2, le=60),
 ):
     tl = await build_timelapse(
-        settings.irsa_timelapse_sia_url,
-        settings.irsa_spherex_collection,
+        getattr(settings, "irsa_tap_url", "https://irsa.ipac.caltech.edu/TAP"),
         ra, dec, fov, detector, max_frames,
         allow_synthetic=settings.allow_synthetic_fallback,
     )
@@ -29,7 +28,7 @@ async def timelapse(
         "fov_arcmin": tl.fov_arcmin,
         "size_px": tl.size_px,
         "pixel_scale_arcsec": 6.2,
-        "collection": settings.irsa_spherex_collection,
+        "collection": "SPHEREx (IRSA TAP)",
         "notes": tl.notes,
         "frames": [asdict(f) for f in tl.frames],
     }

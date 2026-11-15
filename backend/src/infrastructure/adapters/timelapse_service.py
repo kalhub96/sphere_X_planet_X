@@ -1,8 +1,10 @@
 """Multi-epoch SPHEREx cutout time-lapse builder.
 
-Real path: IRSA SIA2 (pyvo) -> FITS cutouts -> reproject to a common TAN grid -> shared-stretch PNG frames.
+Real path (follows IRSA's "SPHEREx Spectral Image Cutouts" tutorial):
+  IRSA TAP (spherex.plane JOIN spherex.artifact) -> per-file cutout URL (?center=RA,DECd&size=DEG)
+  -> FITS IMAGE/FLAGS -> reproject to a common TAN grid -> shared-stretch PNG frames.
 Fallback: deterministic synthetic field (flagged ``source="synthetic"``) when IRSA is unreachable.
-Update for new data releases by changing ``IRSA_SPHEREX_COLLECTION`` (e.g. ``spherex_qr2``).
+New data releases appear in the same TAP tables, so no code change is needed.
 """
 from __future__ import annotations
 
@@ -110,27 +112,51 @@ def build_synthetic(ra: float, dec: float, fov_arcmin: float, n_frames: int = 12
 
 
 # ---------------------------------------------------------------- real IRSA path
-def _search_irsa(sia2_url: str, collection: str, ra: float, dec: float, radius_deg: float):
+IRSA_BASE = "https://irsa.ipac.caltech.edu/"
+DEFAULT_TAP_URL = "https://irsa.ipac.caltech.edu/TAP"
+
+
+def build_adql(ra: float, dec: float, fov_deg: float, bandpass: str | None) -> str:
+    """ADQL from IRSA's spherex-cutouts tutorial: one row per spectral image covering (ra, dec)."""
+    band = f"AND p.energy_bandpassname = '{bandpass}'" if bandpass else ""
+    return (
+        "SELECT "
+        f"'{IRSA_BASE}' || a.uri || '?center={ra:.7f},{dec:.7f}d&size={fov_deg:.6f}' AS uri, "
+        "p.time_bounds_lower AS mjd, p.energy_bandpassname AS bandpass "
+        "FROM spherex.artifact a JOIN spherex.plane p ON a.planeid = p.planeid "
+        f"WHERE 1 = CONTAINS(POINT('ICRS', {ra:.7f}, {dec:.7f}), p.poly) {band} "
+        "ORDER BY p.time_bounds_lower"
+    )
+
+
+def _tap_search(tap_url: str, adql: str):
     import pyvo
 
-    svc = pyvo.dal.sia2.SIA2Service(sia2_url)
-    return svc.search(pos=(ra, dec, radius_deg), collection=collection, maxrec=400)
+    return pyvo.dal.TAPService(tap_url).run_sync(adql, maxrec=2000).to_table()
 
 
-def _cutout_url(access_url: str, ra: float, dec: float, fov_deg: float) -> str:
-    sep = "&" if "?" in access_url else "?"
-    return f"{access_url}{sep}center={ra},{dec}deg&size={fov_deg}deg"
+def _bandpass_for(detector: int | None) -> str | None:
+    return f"SPHEREx-D{detector}" if detector else None
+
+
+def _array_center_um(bandpass: str) -> float:
+    edges = (0.75, 1.11, 1.64, 2.42, 3.82, 4.42, 5.00)
+    try:
+        a = int(bandpass[-1]) - 1
+        return float((edges[a] * edges[a + 1]) ** 0.5)
+    except Exception:
+        return 0.0
 
 
 async def build_from_irsa(
-    sia2_url: str,
-    collection: str,
+    tap_url: str,
     ra: float,
     dec: float,
     fov_arcmin: float,
     detector: int | None,
     max_frames: int,
-    timeout: float = 45.0,
+    timeout: float = 60.0,
+    _fetch=None,
 ) -> Timelapse:
     import httpx
     from reproject import reproject_interp
@@ -138,13 +164,20 @@ async def build_from_irsa(
 
     loop = asyncio.get_running_loop()
     fov_deg = fov_arcmin / 60.0
-    results = await asyncio.wait_for(
-        loop.run_in_executor(None, _search_irsa, sia2_url, collection, ra, dec, fov_deg / 2), timeout
-    )
-    rows = [r for r in results if getattr(r, "access_url", None)]
+    adql = build_adql(ra, dec, fov_deg, _bandpass_for(detector))
+    table = await asyncio.wait_for(loop.run_in_executor(None, _tap_search, tap_url, adql), timeout)
+    rows = [(str(r["uri"]), float(r["mjd"] or 0.0), str(r["bandpass"])) for r in table]
     if not rows:
         raise RuntimeError("IRSA returned no SPHEREx observations for this position")
-    rows.sort(key=lambda r: float(getattr(r, "t_min", 0.0) or 0.0))
+    notes: list[str] = []
+    if detector is None:  # a time-lapse must compare like with like: keep the best-sampled array
+        by_band: dict[str, list] = {}
+        for r in rows:
+            by_band.setdefault(r[2], []).append(r)
+        best = max(by_band, key=lambda k: len(by_band[k]))
+        rows = by_band[best]
+        notes.append(f"{len(by_band)} detector arrays cover this field; showing {best} ({len(rows)} images).")
+    rows.sort(key=lambda r: r[1])
     if len(rows) > max_frames:  # thin evenly across time
         idx = np.linspace(0, len(rows) - 1, max_frames).round().astype(int)
         rows = [rows[i] for i in idx]
@@ -152,18 +185,21 @@ async def build_from_irsa(
     size = size_for_fov(fov_arcmin)
     out_wcs = target_wcs(ra, dec, size)
 
-    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
-        async def grab(row):
-            r = await client.get(_cutout_url(str(row.access_url), ra, dec, fov_deg))
-            r.raise_for_status()
-            return row, r.content
+    async def grab(client, row):
+        r = await client.get(row[0])
+        r.raise_for_status()
+        return row, r.content
 
-        fetched = await asyncio.gather(*(grab(r) for r in rows), return_exceptions=True)
+    if _fetch is not None:
+        fetched = await asyncio.gather(*(_fetch(r) for r in rows), return_exceptions=True)
+    else:
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+            fetched = await asyncio.gather(*(grab(client, r) for r in rows), return_exceptions=True)
 
     arrays, metas = [], []
     for item in fetched:
         if isinstance(item, Exception):
-            log.warning("cutout failed: %s", item)
+            log.warning("cutout failed: %r", item)
             continue
         row, content = item
         try:
@@ -171,36 +207,29 @@ async def build_from_irsa(
                 warnings.simplefilter("ignore")
                 with fits.open(io.BytesIO(content)) as hdul:
                     hdu = hdul["IMAGE"] if "IMAGE" in hdul else hdul[1]
-                    det = int(hdul[0].header.get("DETECTOR", hdu.header.get("DETECTOR", 0)) or 0)
-                    if detector and det and det != detector:
-                        continue
-                    flags = hdul["FLAGS"].data if "FLAGS" in hdul else None
                     data = hdu.data.astype(np.float32)
-                    if flags is not None:
-                        data = np.where(flags != 0, np.nan, data)
-                    quality = 100.0 * float(np.isfinite(data).mean())
+                    # IRSA flag bits are not all "bad pixel"; report the clean fraction, mask only non-finite values.
+                    quality = 100.0
+                    if "FLAGS" in hdul and hdul["FLAGS"].data is not None:
+                        quality = 100.0 * float((hdul["FLAGS"].data == 0).mean())
                     wcs = WCS(hdu.header, naxis=2)
                     reproj, _ = reproject_interp((data, wcs), out_wcs, shape_out=(size, size))
-            t_min = float(getattr(row, "t_min", 0.0) or 0.0)
-            em = getattr(row, "energy_bounds", None)
-            wl = float(np.mean(em) * 1e6) if em is not None and np.size(em) == 2 and np.mean(em) < 1e-3 else 0.0
             arrays.append(reproj)
-            metas.append((str(getattr(row, "obs_id", "")), t_min, wl, det, quality))
+            metas.append((row[0].split("/")[-1].split("?")[0], row[1], _array_center_um(row[2]), int(row[2][-1]) if row[2][-1].isdigit() else 0, quality))
         except Exception as e:  # skip unreadable frames, keep the rest
-            log.warning("frame parse failed: %s", e)
+            log.warning("frame parse failed: %r", e)
 
     if not arrays:
-        raise RuntimeError("No usable SPHEREx cutouts were returned")
+        raise RuntimeError("IRSA found images but no cutout could be read (%d requested)" % len(rows))
     vmin, vmax = stretch_limits(arrays)
-    tl = Timelapse("irsa", ra, dec, fov_arcmin, size)
+    tl = Timelapse("irsa", ra, dec, fov_arcmin, size, notes=notes)
     for i, (a, (oid, mjd, wl, det, q)) in enumerate(zip(arrays, metas)):
         tl.frames.append(Frame(i, oid, mjd, mjd_to_date(mjd) if mjd else "", wl, det, q, render_png_b64(a, vmin, vmax)))
     return tl
 
 
 async def build_timelapse(
-    sia2_url: str,
-    collection: str,
+    tap_url: str,
     ra: float,
     dec: float,
     fov_arcmin: float,
@@ -209,11 +238,11 @@ async def build_timelapse(
     allow_synthetic: bool = True,
 ) -> Timelapse:
     try:
-        return await build_from_irsa(sia2_url, collection, ra, dec, fov_arcmin, detector, max_frames)
+        return await build_from_irsa(tap_url or DEFAULT_TAP_URL, ra, dec, fov_arcmin, detector, max_frames)
     except Exception as e:
-        log.warning("IRSA time-lapse failed (%s)", e)
+        log.warning("IRSA time-lapse failed: %r", e)
         if not allow_synthetic:
             raise
         tl = build_synthetic(ra, dec, fov_arcmin, min(max_frames, 12))
-        tl.notes.append(f"IRSA error: {str(e).strip().splitlines()[0][:160]}")
+        tl.notes.append(f"IRSA error: {type(e).__name__}: {' '.join(str(e).split())[:240]}")
         return tl
