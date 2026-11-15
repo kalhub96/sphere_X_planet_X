@@ -36,3 +36,7 @@ backend/.venv/
 .idea/
 .vscode/
 .vercel
+__pycache__/
+*.py[cod]
+node_modules/
+.next/
