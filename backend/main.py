@@ -9,8 +9,6 @@ from src.infrastructure.api.v1.routers.epochs import router as epochs_router
 from src.infrastructure.api.v1.routers.compare import router as compare_router
 from src.infrastructure.api.v1.routers.candidates import router as candidates_router
 from src.infrastructure.api.v1.routers.wavelengths import router as wavelengths_router
-from src.infrastructure.api.v1.routers.planet_x import router as planet_x_router
-from src.infrastructure.api.v1.routers.planets import router as planets_router
 from src.infrastructure.api.v1.routers.timelapse import router as timelapse_router
 
 @asynccontextmanager
@@ -39,8 +37,6 @@ app.include_router(epochs_router)
 app.include_router(compare_router)
 app.include_router(candidates_router)
 app.include_router(wavelengths_router)
-app.include_router(planet_x_router)
-app.include_router(planets_router)
 app.include_router(timelapse_router)
 
 @app.get("/health")
