@@ -246,3 +246,16 @@ async def build_timelapse(
         tl = build_synthetic(ra, dec, fov_arcmin, min(max_frames, 12))
         tl.notes.append(f"IRSA error: {type(e).__name__}: {' '.join(str(e).split())[:240]}")
         return tl
+    
+    def aperture_flux(data: np.ndarray, r_px: float = 2.0) -> tuple[float | None, float | None]:    n_y, n_x = data.shape
+    cy, cx = (n_y - 1) / 2.0, (n_x - 1) / 2.0
+    yy, xx = np.mgrid[0:n_y, 0:n_x]
+    rr = np.hypot(xx - cx, yy - cy)
+    ok = np.isfinite(data)
+    ap = (rr <= r_px) & ok
+    ann = (rr >= r_px + 2) & (rr <= r_px + 6) & ok
+    if ap.sum() < 3 or ann.sum() < 10:
+        return None, None
+    bg = float(np.median(data[ann]))
+    sigma = 1.4826 * float(np.median(np.abs(data[ann] - bg)))
+    return float(np.sum(data[ap] - bg)), sigma * float(np.sqrt(ap.sum()))
