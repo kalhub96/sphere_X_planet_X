@@ -1,9 +1,11 @@
 import json
 import time
+from typing import Any
 
 class RedisCache:
     def __init__(self, redis_url: str) -> None:
         self._memory_cache: dict[str, tuple[float, str]] = {}
+        self._memory_bytes_cache: dict[str, tuple[float, bytes]] = {}
         self._client = None
         try:
             import redis.asyncio as aioredis
@@ -16,11 +18,11 @@ class RedisCache:
             try:
                 raw = await self._client.get(key)
                 if raw:
-                    return json.loads(raw)
+                    return json.loads(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
             except Exception:
                 pass
         
-        # in-memory fallback
+        # in-memory fallback with TTL
         if key in self._memory_cache:
             exp, val = self._memory_cache[key]
             if time.time() < exp:
@@ -41,17 +43,28 @@ class RedisCache:
     async def get_bytes(self, key: str) -> bytes | None:
         if self._client:
             try:
-                return await self._client.get(key)
+                raw = await self._client.get(key)
+                if raw is not None:
+                    return raw
             except Exception:
                 pass
+        
+        # in-memory fallback with TTL
+        if key in self._memory_bytes_cache:
+            exp, val = self._memory_bytes_cache[key]
+            if time.time() < exp:
+                return val
+            del self._memory_bytes_cache[key]
         return None
 
     async def set_bytes(self, key: str, value: bytes, ttl: int = 86400) -> None:
         if self._client:
             try:
                 await self._client.set(key, value, ex=ttl)
+                return
             except Exception:
                 pass
+        self._memory_bytes_cache[key] = (time.time() + ttl, value)
 
     async def close(self) -> None:
         if self._client:

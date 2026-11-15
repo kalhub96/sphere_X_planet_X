@@ -1,152 +1,185 @@
-# sphere_X_planet_X
-=======
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-=======
-# Sphere X Planet X
->>>>>>> cb521aa (Add .nvmrc file and update README with system requirements)
+# SkyTrace — Planet X & SPHEREx
 
-A modern web application built with [Next.js](https://nextjs.org), [React](https://react.dev), [TypeScript](https://www.typescriptlang.org/), and [Tailwind CSS](https://tailwindcss.com/).
+A public web tool for **watching the sky change over time** in images from NASA's
+[SPHEREx](https://science.nasa.gov/mission/spherex/) mission. Type in a position
+(RA/Dec) or pick a target, and SkyTrace plays the SPHEREx images of that patch of
+sky like a short video, so moving objects (brown dwarfs, asteroids, comets, nearby
+stars) and changing ones (variable stars) stand out.
 
----
+Built for the **2026 NASA Space Apps Challenge: "Planet X and SPHEREx"**.
 
-## 📋 System Requirements & Prerequisites
-
-Before downloading and installing this project, ensure your computer meets the following requirements:
-
-| Requirement | Minimum Version | Recommended Version | Description |
-| ----------- | --------------- | ------------------- | ----------- |
-| **Node.js** | `>= 20.9.0`     | `22.x` or `24.x`    | JavaScript runtime required to run Next.js |
-| **npm**     | `>= 10.0.0`     | Latest              | Package manager (bundled with Node.js) |
-| **OS**      | Windows, macOS, or Linux | -          | Any modern operating system |
-
-> [!NOTE]
-> Alternative package managers such as **pnpm** (`>= 9.0.0`), **yarn** (`>= 1.22.0`), or **bun** (`>= 1.0.0`) are also supported.
-
-### How to Check Your Installed Versions
-
-Open your terminal or command prompt and run:
-
-```bash
-node -v
-npm -v
-```
-
-If you do not have Node.js installed, download it from [nodejs.org](https://nodejs.org/). If you use [nvm](https://github.com/nvm-sh/nvm), run:
-
-```bash
-nvm install
-nvm use
-```
+> **The 5 challenge targets are one click away:** Barnard's Star, Epsilon Indi B,
+> WISE 0855, RW Aurigae and R Draconis.
 
 ---
 
-## 🚀 Installation Guide
+## What it does
 
-Follow these steps to set up and run the application locally:
+| Feature | Details |
+| --- | --- |
+| **Coordinate input** | Decimal degrees (`133.7951, -7.2451`) or sexagesimal (`08h55m10.831s, -7d14m42.53s`), plus name lookup. |
+| **Time-series "video"** | Plays every SPHEREx epoch for the patch with play/pause, adjustable FPS and a frame scrubber. |
+| **Viewing modes** | Video loop, Blink (A/B), Split slider, Difference (Epoch N − Epoch 1) and False colour. |
+| **Detector arrays & bands** | Pick one of the 102 bands, or stack a whole detector array (D1–D6, 0.75–5.0 µm) to improve signal-to-noise. |
+| **Field of view** | Presets from 0.05° to 0.50°. Larger fields keep fast movers in frame at the cost of longer downloads. |
+| **Shareable URLs** | `?ra=&dec=&fov=&array=&band=&mode=` restores the exact view, so it can be embedded or shared. |
+| **Cross-mission overlay** | Aladin Lite panel showing Gaia DR3 sources over 2010–2014 unWISE infrared imagery. |
+| **Quality metadata** | Per-frame clean-pixel percentage and flagged-pixel counts from the FITS `FLAGS` plane. |
+| **Candidates & evidence** | Difference-image source detection, confidence scoring, Solar System (MOST) cross-match and an evidence panel with caveats. |
+| **Spectrum view** | 102-band spectral-energy-distribution plot with template overlays (see *Known limitations*). |
 
-### 1. Download / Clone the Repository
+Data comes from the NASA/IPAC Infrared Science Archive (IRSA): the backend queries the
+SPHEREx `spherex_dr1` and `spherex_qr3` collections through the IVOA SIA2 service and
+downloads small server-side cutouts instead of full images, so new releases show up
+without code changes.
 
-If using Git:
+---
+
+## Data honesty: real vs. simulated
+
+SkyTrace shows **real SPHEREx data whenever the IRSA archive responds in time**.
+
+If the archive is slow, unreachable, or returns too few observations, the backend can fall back to an
+**offline demo mode** that generates synthetic observations and images (random noise plus
+scripted moving/variable sources for the five benchmark targets). Demo data is **never**
+silently mixed in:
+
+- every simulated observation and frame carries `is_simulated: true` in the API;
+- `GET /api/v1/epochs` returns `data_source` = `"live"`, `"mixed"` or `"simulated"`;
+- the UI shows an amber **“Simulated demo data — not real SPHEREx images”** banner and a
+  **SIMULATED** badge on each affected frame;
+- simulated records are never written to the database, and simulated responses are cached for
+  only 5 minutes so real data replaces them as soon as the archive is back.
+
+To turn the fallback **off** (recommended for any scientific use) and get an honest `503` error
+instead, set the environment variable:
+
 ```bash
-git clone https://github.com/your-username/sphere-x-planet-x.git
-cd sphere_X_planet_X
+ALLOW_SIMULATED_DATA=false
 ```
 
-If you downloaded a ZIP file:
-1. Extract the `.zip` archive.
-2. Open your terminal and navigate to the extracted folder:
-   ```bash
-   cd path/to/sphere_X_planet_X
-   ```
+---
 
-### 2. Install Dependencies
+## Quick start
 
-Install all required packages by running:
+You need **Python 3.12+** and **Node.js 20+**. Redis is optional (the backend uses an
+in-memory cache if Redis is not running).
+
+### 1. Backend (FastAPI)
 
 ```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+
+Check it: <http://localhost:8000/health> and the interactive docs at <http://localhost:8000/docs>.
+
+### 2. Frontend (Next.js)
+
+```bash
+cd frontend
 npm install
+NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev    # Windows PowerShell: $env:NEXT_PUBLIC_API_URL="http://localhost:8000"; npm run dev
 ```
 
-*(Or `pnpm install`, `yarn install`, `bun install` if using another package manager)*
+Open <http://localhost:3000>.
 
-### 3. Run the Development Server
-
-Start the local development server:
+### Or with Docker
 
 ```bash
-npm run dev
+docker compose up --build
 ```
 
-Once started, open your browser and visit:
-👉 **[http://localhost:3000](http://localhost:3000)**
+Frontend on port 3000, backend on port 8000, Redis on 6379.
 
-Any edits made in [`src/app/page.tsx`](src/app/page.tsx) will update in real time.
-
----
-
-## 🛠 Available Scripts
-
-In the project directory, you can run:
-
-| Command | Description |
-| ------- | ----------- |
-| `npm run dev` | Starts the development server on `http://localhost:3000` with Turbopack |
-| `npm run build` | Compiles and optimizes the app for production deployment |
-| `npm run start` | Starts the production server (requires `npm run build` first) |
-| `npm run lint` | Runs ESLint to check for code issues and styling errors |
+> **Note:** the Next.js files at the repository root (`package.json`, `next.config.ts`,
+> `tsconfig.json`) are an unused leftover of the project template. The real app lives in
+> `frontend/` and `backend/`.
 
 ---
 
-## 📁 Project Structure
+## Configuration
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Backend URL used by the frontend. |
+| `ALLOW_SIMULATED_DATA` | `true` | Allow the labelled offline demo fallback. Set `false` to disable it. |
+| `IRSA_SIA2_URL` | `https://irsa.ipac.caltech.edu/SIA` | IRSA SIA2 service. |
+| `REDIS_URL` | `redis://localhost:6379` | Optional cache. |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./data/skytrace.db` | Observation / candidate store. |
+| `ALLOWED_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | CORS origins. |
+
+---
+
+## API
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/v1/observations?ra=&dec=&fov=&band=&array=` | SPHEREx exposures covering a position. |
+| `GET /api/v1/epochs?ra=&dec=&fov=&band=&array=&stretch=` | Chronological frames (PNG), difference image, candidates, `data_source`. |
+| `GET /api/v1/compare?obs_a=&obs_b=&band=` | Two-observation comparison with difference image and candidates. |
+| `GET /api/v1/candidates/{id}/evidence` | Plain-language evidence, measurements and caveats. |
+| `GET /api/v1/candidates/{id}/sed` | Template spectrum for a candidate (illustrative, see below). |
+| `GET /api/v1/most-check?ra=&dec=&epoch_mjd=` | Solar System cross-match (IRSA MOST). |
+| `GET /api/v1/wavelengths` | The 102 SPHEREx bands and detector arrays. |
+
+URL parameters for the viewer: `ra`, `dec` (degrees), `fov` (0.05, 0.08, 0.15, 0.25, 0.5),
+`array` (`D1`–`D6` or `single`), `band` (0–101), `mode` (`video`, `blink`, `slider`, `difference`, `false_color`).
+
+Example: `http://localhost:3000/compare?ra=133.7951&dec=-7.2451&fov=0.08&array=D6&mode=difference`
+
+---
+
+## Challenge benchmark targets
+
+| Target | RA, Dec (J2000, deg) | Why it is interesting |
+| --- | --- | --- |
+| Barnard's Star | 269.4521, +4.6934 | Fastest known proper motion (about 10.4″/yr). |
+| Epsilon Indi B | 331.0438, −56.7828 | Brown-dwarf pair moving across the sky. |
+| WISE 0855 | 133.7951, −7.2451 (08h55m10.831s, −7°14′42.53″) | Very cold, fast-moving brown dwarf; brightest at long wavelengths. |
+| RW Aurigae | 76.9564, +30.4014 | Irregular variable star. |
+| R Draconis | 248.1633, +66.7539 | Mira-type pulsating variable. |
+
+Presets live in `frontend/app/config/benchmarks.ts`; more detail in [`benchmarks.md`](benchmarks.md).
+
+---
+
+## Project layout
 
 ```text
-├── public/              # Static assets (images, icons, svgs)
-├── src/
-│   └── app/
-│       ├── favicon.ico  # Website favicon
-│       ├── globals.css  # Global styles and Tailwind directives
-│       ├── layout.tsx   # Root layout wrapping all pages
-│       └── page.tsx     # Homepage entry component
-├── .gitignore           # Git ignore rules
-├── .nvmrc               # Node Version Manager specification
-├── eslint.config.mjs    # ESLint configuration
-├── next.config.ts       # Next.js configuration
-├── package.json         # Project metadata and dependencies
-├── README.md            # Project documentation and guide
-└── tsconfig.json        # TypeScript configuration
+backend/    FastAPI service (domain / application / infrastructure layers)
+  src/infrastructure/adapters/   IRSA SIA2 + cutout download, FITS parsing, image processing
+  src/infrastructure/api/v1/     HTTP routers and response schemas
+  scripts/                       benchmark verification and cache pre-warming
+  tests/                         unit and API integration tests
+frontend/   Next.js app
+  app/compare/                   main viewer page (/explore redirects here)
+  app/components/                BlinkViewer, Aladin overlay, SED chart, evidence panel
+  app/lib/                       coordinate parsing, WCS, spectral templates
 ```
 
-<<<<<<< HEAD
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
->>>>>>> 8f4791b (Initial commit from Create Next App)
-=======
+Tests: `cd backend && pytest`. Type-check the frontend: `cd frontend && npx tsc --noEmit`.
+
 ---
 
-## ❓ Troubleshooting
+## Known limitations
 
-<details>
-<summary><b>Error: Node.js version is not supported</b></summary>
+- **Demo fallback:** see *Data honesty*. Verify a demo of the five targets shows
+  `data_source: "live"` before presenting results as real observations.
+- **False-colour view** is illustrative; it is not yet built from three independent real bands.
+- **Spectrum (SED) plot** currently shows generated template spectra, labelled
+  *“Illustrative · not measured”*, rather than photometry measured from the images.
+- **Field of view** is limited to the preset values.
+- Automated detections are a starting point for human inspection, not confirmed discoveries.
 
-Next.js 16 requires Node.js version `20.9.0` or higher. Please upgrade Node.js via [nodejs.org](https://nodejs.org/) or switch using `nvm use 22`.
-</details>
+---
 
-<details>
-<summary><b>Port 3000 is already in use</b></summary>
+## Data and credits
 
-If port 3000 is taken, Next.js will automatically try the next available port (e.g., `http://localhost:3001`), or you can specify a custom port:
-```bash
-npm run dev -- -p 3001
-```
-</details>
+- **NASA/IPAC Infrared Science Archive (IRSA)** — SPHEREx data (DR1 and QR3 collections) and the MOST Solar System search.
+- **ESA Gaia** (DR3) catalogue and **NASA WISE / unWISE** imagery, displayed through **Aladin Lite** from CDS, Strasbourg.
+- Built with Astropy, reproject, photutils, FastAPI, Next.js, React and Chart.js.
 
-<details>
-<summary><b>Dependency issues or clean reinstall</b></summary>
-
-If you encounter issues after updating, delete `node_modules` and reinstall:
-```bash
-rm -rf node_modules package-lock.json
-npm install
-```
-*(On Windows PowerShell: `Remove-Item -Recurse -Force node_modules, package-lock.json` then `npm install`)*
-</details>
->>>>>>> cb521aa (Add .nvmrc file and update README with system requirements)
+NASA does not endorse this project. Please cite the SPHEREx data according to IRSA's current guidance.

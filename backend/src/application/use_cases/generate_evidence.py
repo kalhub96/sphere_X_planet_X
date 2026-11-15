@@ -55,14 +55,24 @@ class GenerateEvidenceUC:
             f"Confidence classified as {conf.label} ({conf.score:.0%}). {known}."
         )
 
+        caveats = list(conf.caveats)
+        quality_flags = {"clean_pixels": 0.95, "flags_zero": True}
+        if candidate is None:
+            caveats.insert(
+                0,
+                "DEMO VALUES: this candidate was not found, so the numbers above "
+                "are placeholder demo values, not measurements.",
+            )
+            quality_flags["is_demo"] = True
+
         return Evidence(
             candidate_id=candidate_id,
             narrative=narrative,
             measurements=measurements,
-            caveats=conf.caveats,
+            caveats=caveats,
             irsa_links=[
                 {"label": "NASA IRSA SPHEREx QR3 Archive", "url": "https://irsa.ipac.caltech.edu/ibe/data/spherex/qr3"},
                 {"label": "NASA MOST Solar System Cross-Match", "url": "https://irsa.ipac.caltech.edu/applications/MOST"},
             ],
-            quality_flags={"clean_pixels": 0.95, "flags_zero": True},
+            quality_flags=quality_flags,
         )

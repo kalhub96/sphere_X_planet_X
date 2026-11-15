@@ -524,3 +524,168 @@ export const SKY_PRESETS = [
     category: 'Deep Survey' as const,
   },
 ];
+
+/**
+ * Parses Right Ascension string into decimal degrees [0, 360).
+ * Supports:
+ * - Decimal degrees: "133.7951", "133.7951°"
+ * - Sexagesimal hours: "08h55m10.831s", "08h 55m 10.831s", "8h 55m 10.8s", "08h55m"
+ * - Colon notation: "08:55:10.831", "08:55"
+ * - Space notation: "08 55 10.831"
+ */
+export function parseRA(input: string): number | null {
+  if (!input) return null;
+  const str = input.trim();
+  if (!str) return null;
+
+  // 1. Check for sexagesimal hour notation with 'h'
+  const hmsRegex = /^(\d+(?:\.\d+)?)\s*h(?:ours?)?(?:\s*(\d+(?:\.\d+)?)\s*m(?:in(?:ute)?s?)?)?(?:\s*(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?)?$/i;
+  const hmsMatch = str.match(hmsRegex);
+  if (hmsMatch) {
+    const hours = parseFloat(hmsMatch[1]) || 0;
+    const mins = parseFloat(hmsMatch[2]) || 0;
+    const secs = parseFloat(hmsMatch[3]) || 0;
+    let deg = (hours + mins / 60 + secs / 3600) * 15;
+    deg = ((deg % 360) + 360) % 360;
+    return deg;
+  }
+
+  // 2. Colon notation: "HH:MM:SS" or "HH:MM"
+  const colonRegex = /^(\d+):(\d+)(?::(\d+(?:\.\d+)?))?$/;
+  const colonMatch = str.match(colonRegex);
+  if (colonMatch) {
+    const hours = parseFloat(colonMatch[1]) || 0;
+    const mins = parseFloat(colonMatch[2]) || 0;
+    const secs = parseFloat(colonMatch[3]) || 0;
+    let deg = (hours + mins / 60 + secs / 3600) * 15;
+    deg = ((deg % 360) + 360) % 360;
+    return deg;
+  }
+
+  // 3. Space-separated notation e.g. "08 55 10.831"
+  const spaceRegex = /^(\d+)\s+(\d+)(?:\s+(\d+(?:\.\d+)?))?$/;
+  const spaceMatch = str.match(spaceRegex);
+  if (spaceMatch) {
+    const hours = parseFloat(spaceMatch[1]) || 0;
+    const mins = parseFloat(spaceMatch[2]) || 0;
+    const secs = parseFloat(spaceMatch[3]) || 0;
+    let deg = (hours + mins / 60 + secs / 3600) * 15;
+    deg = ((deg % 360) + 360) % 360;
+    return deg;
+  }
+
+  // 4. Plain decimal degrees
+  const cleanDecimal = str.replace(/[°ddeg]/gi, '').trim();
+  const num = parseFloat(cleanDecimal);
+  if (!isNaN(num) && isFinite(num)) {
+    return ((num % 360) + 360) % 360;
+  }
+
+  return null;
+}
+
+/**
+ * Parses Declination string into decimal degrees [-90, +90].
+ * Supports:
+ * - Decimal degrees: "-7.2451", "-7.2451°", "+19.182"
+ * - Sexagesimal degrees: "-7d14m42.53s", "-07d 14m 42.53s", "-7° 14' 42.53\"", "+19d18m"
+ * - Colon notation: "-07:14:42.53", "+19:10:55"
+ * - Space notation: "-7 14 42.53"
+ */
+export function parseDec(input: string): number | null {
+  if (!input) return null;
+  const str = input.trim();
+  if (!str) return null;
+
+  // Detect sign
+  let sign = 1;
+  let body = str;
+  if (body.startsWith('-') || body.startsWith('−')) {
+    sign = -1;
+    body = body.slice(1).trim();
+  } else if (body.startsWith('+')) {
+    body = body.slice(1).trim();
+  }
+
+  // 1. Check for dms format: e.g. 7d14m42.53s or 7° 14' 42.53"
+  if (/[°d'm"s]/i.test(body)) {
+    const dmsRegex = /^(\d+(?:\.\d+)?)\s*(?:[°d]|deg)?(?:\s*(\\d+(?:\.\d+)?)\s*(?:['m]|min)?)?(?:\\s*(\\d+(?:\\.\d+)?)\\s*(?:[\"s]|sec)?)?$/i;
+    const dmsMatch = body.match(dmsRegex);
+    if (dmsMatch) {
+      const deg = parseFloat(dmsMatch[1]) || 0;
+      const mins = parseFloat(dmsMatch[2]) || 0;
+      const secs = parseFloat(dmsMatch[3]) || 0;
+      const val = sign * (deg + mins / 60 + secs / 3600);
+      return Math.max(-90, Math.min(90, val));
+    }
+  }
+
+  // 2. Colon notation: DD:MM:SS
+  const colonRegex = /^(\d+):(\d+)(?::(\d+(?:\.\d+)?))?$/;
+  const colonMatch = body.match(colonRegex);
+  if (colonMatch) {
+    const deg = parseFloat(colonMatch[1]) || 0;
+    const mins = parseFloat(colonMatch[2]) || 0;
+    const secs = parseFloat(colonMatch[3]) || 0;
+    const val = sign * (deg + mins / 60 + secs / 3600);
+    return Math.max(-90, Math.min(90, val));
+  }
+
+  // 3. Space notation: "-7 14 42.53"
+  const spaceRegex = /^(\d+)\s+(\d+)(?:\s+(\d+(?:\.\d+)?))?$/;
+  const spaceMatch = body.match(spaceRegex);
+  if (spaceMatch) {
+    const deg = parseFloat(spaceMatch[1]) || 0;
+    const mins = parseFloat(spaceMatch[2]) || 0;
+    const secs = parseFloat(spaceMatch[3]) || 0;
+    const val = sign * (deg + mins / 60 + secs / 3600);
+    return Math.max(-90, Math.min(90, val));
+  }
+
+  // 4. Plain decimal
+  const cleanDecimal = body.replace(/[°ddeg]/gi, '').trim();
+  const num = parseFloat(cleanDecimal);
+  if (!isNaN(num) && isFinite(num)) {
+    return Math.max(-90, Math.min(90, sign * num));
+  }
+
+  return null;
+}
+
+/**
+ * Parses arbitrary coordinate string (single input with both RA & Dec)
+ * e.g. "08h55m10.831s, -7d14m42.53s" or "133.7951 -7.2451" or "08:55:10.831 -07:14:42.53"
+ */
+export function parseCoordinateInput(input: string): { ra: number; dec: number } | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  // Split by comma if present
+  if (trimmed.includes(',')) {
+    const parts = trimmed.split(',');
+    if (parts.length === 2) {
+      const ra = parseRA(parts[0]);
+      const dec = parseDec(parts[1]);
+      if (ra !== null && dec !== null) return { ra, dec };
+    }
+  }
+
+  // Try splitting by space separating RA and signed Dec (+ or -)
+  const decSignMatch = trimmed.match(/^(.*?)\s+([+-].*)$/);
+  if (decSignMatch) {
+    const ra = parseRA(decSignMatch[1]);
+    const dec = parseDec(decSignMatch[2]);
+    if (ra !== null && dec !== null) return { ra, dec };
+  }
+
+  // Space-delimited numbers e.g. "133.7951 -7.2451"
+  const tokens = trimmed.split(/\s+/);
+  if (tokens.length === 2) {
+    const ra = parseRA(tokens[0]);
+    const dec = parseDec(tokens[1]);
+    if (ra !== null && dec !== null) return { ra, dec };
+  }
+
+  return null;
+}

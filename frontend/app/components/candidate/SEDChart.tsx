@@ -218,6 +218,15 @@ export default function SEDChart({
               {candidateId}
             </span>
           )}
+          {!(inputFluxes && inputFluxes.length === 102) && (
+            <span
+              data-testid="sed-illustrative-badge"
+              className="text-[10px] px-2 py-0.5 rounded border border-amber-400 bg-amber-400/15 text-amber-300 font-mono uppercase tracking-wide"
+              title="No measured photometry was supplied, so this is a generated template spectrum."
+            >
+              Illustrative · not measured
+            </span>
+          )}
         </div>
 
         {/* Best-Fit Diagnostic Badge */}
