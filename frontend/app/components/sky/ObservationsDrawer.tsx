@@ -96,7 +96,10 @@ export default function ObservationsDrawer() {
                     <Calendar className="w-3 h-3 text-[var(--text-muted)]" />
                     <span>{obs.obs_date}</span>
                     <span className="text-[var(--text-muted)]">|</span>
-                    <span>{obs.exposure_s}s</span>
+                    <span>
+                      {((obs as any).exposure_s ?? (obs as any).exposure_time ?? '—')}
+                      s
+                    </span>
                   </div>
 
                   <div className="flex gap-1.5">
