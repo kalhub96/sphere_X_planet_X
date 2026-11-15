@@ -16,10 +16,21 @@ import {
   useTransform,
   type MotionValue,
 } from 'framer-motion';
-import { Telescope, ArrowRight, Layers, ExternalLink, Search, Sparkles } from 'lucide-react';
+import CelestialSphere from './components/sky/CelestialSphere';
+import { Telescope, ArrowRight, Compass, Layers, Link2, ExternalLink, Search } from 'lucide-react';
 
 /* ---------- config ---------- */
 // Update via env var when a new SPHEREx release lands; no code change needed.
+const TOKENS = {
+  '--st-gold': '#D4AF37',
+  '--st-gold-soft': '#E6C65C',
+  '--st-ivory': '#F3EEE0',
+  '--st-muted': '#9A9DA8',
+  '--st-dim': '#6B6E7A',
+  '--st-line': 'rgba(212,175,55,0.22)',
+  '--st-ok': '#8FBC8F',
+} as React.CSSProperties;
+
 const RELEASE = process.env.NEXT_PUBLIC_SPHEREX_RELEASE ?? 'Latest';
 
 const blinkUrl = (ra: number, dec: number, fov = 120) => `/compare?ra=${ra}&dec=${dec}&fov=${fov}`;
@@ -35,10 +46,10 @@ const TARGETS = [
     dec: -7.2451,
     fov: 300,
     badge: 'Fast-moving brown dwarf',
-    color: 'var(--accent-cyan)',
+    color: 'var(--st-gold)',
     pos: { x: 68, y: 30 },
     description:
-      'A very cold, nearby brown dwarf with a large proper motion. It visibly shifts between SPHEREx epochs, best revealed in Band/Detector 6 (4.42–5.00 µm).',
+      'A very cold, nearby brown dwarf with a large proper motion. It should visibly shift between SPHEREx epochs, which makes it a good first test for the blink view.',
     metrics: [
       { label: 'Distance', value: '≈ 2.3 pc' },
       { label: 'Proper motion', value: '≈ 8″/yr' },
@@ -53,7 +64,7 @@ const TARGETS = [
     dec: 4.693,
     fov: 300,
     badge: 'Nearby red dwarf',
-    color: 'var(--accent-orange)',
+    color: 'var(--st-gold-soft)',
     pos: { x: 32, y: 42 },
     description:
       'The star with the largest known proper motion. Its shift across the sky is large enough to see between scans.',
@@ -71,7 +82,7 @@ const TARGETS = [
     dec: -56.786,
     fov: 300,
     badge: 'Brown dwarf binary',
-    color: 'var(--accent-gold)',
+    color: 'var(--st-gold)',
     pos: { x: 58, y: 68 },
     description:
       'A pair of brown dwarfs orbiting the nearby star Epsilon Indi A. The system moves together across the sky.',
@@ -89,7 +100,7 @@ const TARGETS = [
     dec: 30.401,
     fov: 120,
     badge: 'Variable star',
-    color: 'var(--accent-green)',
+    color: 'var(--st-ok)',
     pos: { x: 22, y: 25 },
     description: 'A young star with irregular brightness changes. Watch for flux variation rather than motion.',
     metrics: [
@@ -106,7 +117,7 @@ const TARGETS = [
     dec: 66.75,
     fov: 120,
     badge: 'Variable star',
-    color: 'var(--accent-cyan)',
+    color: 'var(--st-gold)',
     pos: { x: 76, y: 62 },
     description: 'A Mira-type variable that swells and fades over months. Compare epochs to see the change.',
     metrics: [
@@ -119,7 +130,7 @@ const TARGETS = [
 
 const STAT_BADGES = [
   { value: '102', label: 'Spectral Bands', sub: 'Near-infrared, 0.75 – 5.0 µm.' },
-  { value: '6', label: 'Detector Arrays', sub: 'Each array covers its own wavelength range (D1–D6).' },
+  { value: '6', label: 'Detector Arrays', sub: 'Each array covers its own wavelength range.' },
   { value: '6 mo', label: 'Full-Sky Cadence', sub: 'The whole sky is mapped every six months.' },
   { value: '6.2″', label: 'Pixel Scale', sub: 'Angular size of one SPHEREx pixel.' },
 ];
@@ -127,38 +138,38 @@ const STAT_BADGES = [
 const CAPABILITIES = [
   {
     n: '01',
-    title: 'Multi-Epoch Video & Blink',
-    desc: 'Step through images of one patch over time to spot objects that move or change brightness.',
-    href: blinkUrl(133.7951, -7.2451, 300),
-    cta: 'Open Viewer',
-    Icon: Layers,
+    title: '3D Celestial Explorer',
+    desc: 'Browse the sky on an interactive sphere and pick a patch to inspect.',
+    href: '/explore',
+    cta: 'Launch',
+    Icon: Compass,
   },
   {
     n: '02',
-    title: 'Image Subtraction & Dipoles',
-    desc: 'Instant pixel difference mapping revealing clean positive/negative dipole signatures of moving objects.',
-    href: '/compare?mode=difference',
-    cta: 'Explore Differences',
-    Icon: Sparkles,
+    title: 'Blink Viewer',
+    desc: 'Step through images of one patch over time to spot objects that move or change brightness.',
+    href: blinkUrl(133.7951, -7.2451, 300),
+    cta: 'Open',
+    Icon: Layers,
   },
   {
     n: '03',
-    title: 'Detector Coaddition (D1–D6)',
-    desc: 'Separately coadd across SPHEREx detector arrays to boost signal-to-noise on faint infrared targets.',
-    href: '/compare?array=D6',
-    cta: 'View Coadds',
-    Icon: Telescope,
+    title: 'Shareable URLs',
+    desc: 'Every view is set by RA, Dec and field of view in the URL, so it can be linked or embedded.',
+    href: blinkUrl(269.452, 4.693, 300),
+    cta: 'Try',
+    Icon: Link2,
   },
 ];
 
 const MANIFESTO =
   'Compare images of the same patch taken at different times. Anything that moves or changes brightness stands out.';
 
-const GRAD = 'bg-gradient-to-r from-[var(--accent-cyan)] via-[var(--accent-gold)] to-[var(--accent-orange)] bg-clip-text text-transparent';
-const PANEL = 'glass-panel border border-[var(--border-subtle)] backdrop-blur-md';
+const GRAD = 'italic text-[var(--st-gold)]';
+const PANEL = 'st-panel backdrop-blur-md';
 const LABEL = 'font-mono text-xs uppercase tracking-[0.08em]';
 const INPUT =
-  'w-full px-3 py-3 rounded-lg bg-[rgba(13,18,32,0.85)] border border-[var(--border-subtle)] text-sm text-[#F0F4FF] placeholder:text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent-cyan)]';
+  'w-full px-3 py-3 rounded-sm bg-[rgba(18,19,24,0.85)] border border-[var(--st-line)] text-sm text-[#F3EEE0] placeholder:text-[var(--st-muted)] focus:outline-none focus:border-[var(--st-gold)]';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -292,7 +303,7 @@ function CursorGlow() {
     <motion.div
       aria-hidden="true"
       style={{ x: sx, y: sy }}
-      className="pointer-events-none fixed left-0 top-0 z-[5] hidden h-[400px] w-[400px] rounded-full md:block bg-[radial-gradient(circle,rgba(0,229,255,0.10),transparent_65%)]"
+      className="pointer-events-none fixed left-0 top-0 z-[5] hidden h-[400px] w-[400px] rounded-full md:block bg-[radial-gradient(circle,rgba(212,175,55,0.10),transparent_65%)]"
     />
   );
 }
@@ -311,18 +322,18 @@ function CoordForm() {
         const q = new URLSearchParams({ ra: ra.trim(), dec: dec.trim(), fov });
         router.push(`/compare?${q.toString()}`);
       }}
-      className={`mx-auto mt-8 max-w-3xl p-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto] text-left bg-[rgba(13,18,32,0.85)] ${PANEL} rounded-2xl`}
+      className={`mx-auto mt-8 max-w-3xl p-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto] text-left bg-[rgba(18,19,24,0.85)] ${PANEL} rounded-sm`}
     >
       <label className="block">
-        <span className={`block mb-1 text-[var(--text-secondary)] ${LABEL}`}>RA (deg or hh:mm:ss)</span>
+        <span className={`block mb-1 text-[var(--st-muted)] ${LABEL}`}>RA (deg or hh:mm:ss)</span>
         <input value={ra} onChange={(e) => setRa(e.target.value)} required name="ra" placeholder="08:55:10.831" className={INPUT} />
       </label>
       <label className="block">
-        <span className={`block mb-1 text-[var(--text-secondary)] ${LABEL}`}>Dec (deg or dd:mm:ss)</span>
+        <span className={`block mb-1 text-[var(--st-muted)] ${LABEL}`}>Dec (deg or dd:mm:ss)</span>
         <input value={dec} onChange={(e) => setDec(e.target.value)} required name="dec" placeholder="-07:14:42.53" className={INPUT} />
       </label>
       <label className="block">
-        <span className={`block mb-1 text-[var(--text-secondary)] ${LABEL}`}>Field of view</span>
+        <span className={`block mb-1 text-[var(--st-muted)] ${LABEL}`}>Field of view</span>
         <select value={fov} onChange={(e) => setFov(e.target.value)} name="fov" className={INPUT}>
           <option value="60">1′</option>
           <option value="120">2′</option>
@@ -332,7 +343,7 @@ function CoordForm() {
       </label>
       <button
         type="submit"
-        className="self-end px-5 py-3 rounded-lg bg-[var(--accent-cyan)] text-[#060810] text-sm font-bold hover:shadow-[0_0_16px_rgba(0,229,255,0.5)] transition-all flex items-center justify-center gap-2"
+        className="self-end px-5 py-3 rounded-sm bg-[var(--st-gold)] text-[#0a0b0f] text-xs font-mono font-semibold uppercase tracking-[0.12em] hover:shadow-[0_0_16px_rgba(212,175,55,0.5)] transition-all flex items-center justify-center gap-2"
       >
         <Search className="w-4 h-4" /> Blink
       </button>
@@ -354,6 +365,8 @@ export default function HomePage() {
     const prev = scrollY.getPrevious() ?? 0;
     setNavHidden(latest > prev && latest > 120);
   });
+
+  const bgScale = useTransform(scrollYProgress, [0, 1], [1, 1.28]);
 
   const heroRef = useRef<HTMLElement>(null);
   const { scrollYProgress: heroP } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
@@ -377,43 +390,43 @@ export default function HomePage() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="relative min-h-screen w-screen overflow-x-hidden bg-[#060810] text-[#F0F4FF] font-sans">
+      <div className="relative min-h-screen w-screen overflow-x-hidden bg-[#0a0b0f] text-[#F3EEE0] font-sans" style={TOKENS}>
+        <style>{`.st-panel{background:rgba(255,255,255,0.02);border:1px solid var(--st-line);border-radius:4px}.st-serif{font-family:Cormorant Garamond,Georgia,serif}`}</style>
         <motion.div
           style={{ scaleX: progress }}
-          className="fixed top-0 left-0 right-0 h-[3px] origin-left z-50 bg-gradient-to-r from-[var(--accent-cyan)] via-[var(--accent-gold)] to-[var(--accent-orange)]"
+          className="fixed top-0 left-0 right-0 h-[3px] origin-left z-50 bg-gradient-to-r from-[var(--st-gold)] via-[var(--st-gold)] to-[var(--st-gold-soft)]"
         />
 
-        {/* High-performance cosmic background */}
-        <div className="fixed inset-0 z-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-950 via-[#060810] to-[#030408]">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(0,229,255,0.08),transparent_55%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_60%,rgba(255,107,53,0.05),transparent_50%)]" />
-        </div>
+        <motion.div style={{ scale: bgScale }} className="fixed inset-0 z-0 pointer-events-auto opacity-70">
+          <CelestialSphere className="w-full h-full" />
+        </motion.div>
+        <div className="fixed inset-0 z-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(10,11,15,0.2)_0%,rgba(10,11,15,0.7)_65%,#0a0b0f_100%)]" />
         <CursorGlow />
 
         <motion.header
           animate={{ y: navHidden ? '-100%' : '0%' }}
           transition={{ duration: 0.4, ease: EASE }}
-          className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[rgba(6,8,16,0.72)] backdrop-blur-md"
+          className="sticky top-0 z-40 border-b border-[var(--st-line)] bg-[rgba(10,11,15,0.72)] backdrop-blur-md"
         >
           <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3">
-              <span className="w-9 h-9 rounded-xl bg-[rgba(0,229,255,0.15)] text-[var(--accent-cyan)] flex items-center justify-center border border-[rgba(0,229,255,0.3)] shadow-[0_0_12px_rgba(0,229,255,0.3)]">
+              <span className="w-9 h-9 rounded-sm bg-[rgba(212,175,55,0.15)] text-[var(--st-gold)] flex items-center justify-center border border-[rgba(212,175,55,0.3)] shadow-[0_0_12px_rgba(212,175,55,0.3)]">
                 <Telescope className="w-5 h-5" />
               </span>
-              <span className="text-lg font-extrabold tracking-tight">SkyTrace</span>
+              <span className="st-serif text-2xl leading-none">Sky<span className="italic text-[var(--st-gold)]">Trace</span></span>
             </Link>
 
-            <nav className={`hidden md:flex items-center gap-8 text-[var(--text-secondary)] ${LABEL}`}>
-              <a href="#how" className="hover:text-[var(--accent-cyan)] transition-colors">How it works</a>
-              <a href="#targets" className="hover:text-[var(--accent-cyan)] transition-colors">Try a target</a>
-              <a href="#capabilities" className="hover:text-[var(--accent-cyan)] transition-colors">Tools</a>
+            <nav className={`hidden md:flex items-center gap-8 text-[var(--st-muted)] ${LABEL}`}>
+              <a href="#how" className="hover:text-[var(--st-gold)] transition-colors">How it works</a>
+              <a href="#targets" className="hover:text-[var(--st-gold)] transition-colors">Try a target</a>
+              <a href="#capabilities" className="hover:text-[var(--st-gold)] transition-colors">Tools</a>
             </nav>
 
             <Link
-              href="/compare"
-              className="px-4 py-2 rounded-lg bg-[var(--accent-cyan)] text-[#060810] text-sm font-bold hover:shadow-[0_0_16px_rgba(0,229,255,0.5)] transition-all flex items-center gap-1.5"
+              href="/explore"
+              className="px-4 py-2 rounded-sm bg-[var(--st-gold)] text-[#0a0b0f] text-xs font-mono font-semibold uppercase tracking-[0.12em] hover:shadow-[0_0_16px_rgba(212,175,55,0.5)] transition-all flex items-center gap-1.5"
             >
-              Start Investigating <ArrowRight className="w-4 h-4" />
+              Launch Explorer <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </motion.header>
@@ -429,12 +442,12 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: -16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: EASE }}
-                className={`inline-block px-4 py-2 rounded-full border border-[var(--border-subtle)] bg-[rgba(13,18,32,0.7)] backdrop-blur-md text-[var(--text-secondary)] ${LABEL}`}
+                className={`inline-block px-4 py-2 rounded-full border border-[var(--st-line)] bg-[rgba(18,19,24,0.7)] backdrop-blur-md text-[var(--st-muted)] ${LABEL}`}
               >
                 NASA SPHEREx · {RELEASE} release
               </motion.span>
 
-              <h1 className="mt-6 mb-6 text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.06]">
+              <h1 className="mt-6 mb-6 text-4xl sm:text-6xl lg:text-7xl st-serif font-normal tracking-tight leading-[1.06]">
                 <SplitWords text="Watch the sky change." delay={0.15} />
                 <br />
                 <SplitWords text="Spot what moves." wordClass={GRAD} delay={0.5} />
@@ -444,7 +457,7 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.9, ease: EASE, delay: 0.9 }}
-                className="max-w-2xl mx-auto text-base sm:text-lg text-[var(--text-secondary)] leading-relaxed"
+                className="max-w-2xl mx-auto text-base sm:text-lg text-[var(--st-muted)] leading-relaxed"
               >
                 Enter a position on the sky and see SPHEREx images of that patch played like a short video.
                 Moving asteroids, comets, stars and brown dwarfs show up as points that shift between frames.
@@ -455,18 +468,18 @@ export default function HomePage() {
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-4">
                   <Magnetic>
                     <Link
-                      href="/compare"
-                      className="px-6 py-3.5 rounded-xl bg-[var(--accent-cyan)] text-[#060810] font-bold text-sm hover:shadow-[0_0_24px_rgba(0,229,255,0.6)] transition-all flex items-center gap-2"
+                      href="/explore"
+                      className="px-6 py-3.5 rounded-sm bg-[var(--st-gold)] text-[#0a0b0f] font-semibold text-sm hover:shadow-[0_0_24px_rgba(212,175,55,0.6)] transition-all flex items-center gap-2"
                     >
-                      <Layers className="w-4 h-4" /> Open Investigation Viewer
+                      <Compass className="w-4 h-4" /> Browse the sky
                     </Link>
                   </Magnetic>
                   <Magnetic>
                     <a
                       href="#targets"
-                      className={`px-6 py-3.5 rounded-xl text-sm font-semibold flex items-center gap-2 bg-[rgba(13,18,32,0.85)] hover:border-[var(--border-hover)] ${PANEL}`}
+                      className={`px-6 py-3.5 rounded-sm text-sm font-semibold flex items-center gap-2 bg-[rgba(18,19,24,0.85)] hover:border-[var(--st-gold)] ${PANEL}`}
                     >
-                      <Sparkles className="w-4 h-4 text-[var(--accent-orange)]" /> Try an example
+                      <Layers className="w-4 h-4 text-[var(--st-gold-soft)]" /> Try an example
                     </a>
                   </Magnetic>
                 </div>
@@ -476,31 +489,26 @@ export default function HomePage() {
 
           {/* HOW IT WORKS + STATS */}
           <section id="how" className="max-w-6xl mx-auto px-5 py-28 scroll-mt-20">
-            <Reveal>
-              <div className={`text-[var(--accent-cyan)] mb-3 ${LABEL}`}>How it works</div>
-              <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-6">
-                Turn astronomical data into motion you can see.
-              </h2>
-            </Reveal>
+            <h2 className="mt-4 mb-8 text-3xl sm:text-4xl st-serif font-normal tracking-tight leading-tight">
+              <SplitWords text="Find discoveries by" />{' '}
+              <SplitWords text="comparing images over time." wordClass={GRAD} delay={0.3} />
+            </h2>
 
-            <ScrollFillText
-              text={MANIFESTO}
-              className="text-xl sm:text-3xl font-medium leading-relaxed text-[var(--text-primary)] my-12"
-            />
+            <ScrollFillText text={MANIFESTO} className="max-w-4xl text-2xl sm:text-4xl font-semibold leading-snug tracking-tight text-[var(--st-ivory)]" />
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-16">
+            <div className={`mt-14 grid grid-cols-2 lg:grid-cols-4 ${PANEL} overflow-hidden`}>
               {STAT_BADGES.map((s, i) => (
                 <motion.div
                   key={s.label}
-                  initial={{ opacity: 0, y: 30 }}
+                  initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '-60px' }}
-                  transition={{ duration: 0.7, ease: EASE, delay: i * 0.1 }}
-                  className={`p-6 rounded-2xl ${PANEL}`}
+                  transition={{ duration: 0.8, ease: EASE, delay: i * 0.12 }}
+                  className={`p-6 border-[var(--st-line)] ${i % 2 === 0 ? 'border-r' : ''} ${i < 2 ? 'border-b lg:border-b-0' : ''} ${i < 3 ? 'lg:border-r' : 'lg:border-r-0'}`}
                 >
-                  <CountUp value={s.value} className={`text-3xl sm:text-4xl font-extrabold mb-1 ${GRAD}`} />
-                  <div className="text-sm font-bold text-[var(--text-primary)] mb-1">{s.label}</div>
-                  <p className="text-sm text-[var(--text-secondary)] leading-snug">{s.sub}</p>
+                  <CountUp value={s.value} className={`text-4xl font-extrabold font-mono ${GRAD}`} />
+                  <div className={`mt-3 mb-1 text-[var(--st-gold)] ${LABEL}`}>{s.label}</div>
+                  <p className="text-sm text-[var(--st-muted)] leading-snug">{s.sub}</p>
                 </motion.div>
               ))}
             </div>
@@ -509,10 +517,10 @@ export default function HomePage() {
           {/* TARGETS */}
           <section id="targets" className="scroll-mt-20 py-20">
             <div className="w-full max-w-6xl mx-auto px-5">
-              <h2 className="mt-4 mb-2 text-3xl sm:text-4xl font-extrabold tracking-tight">
+              <h2 className="mt-4 mb-2 text-3xl sm:text-4xl st-serif font-normal tracking-tight">
                 <SplitWords text="Try a known target" />
               </h2>
-              <p className="mb-8 text-[var(--text-secondary)] max-w-2xl">
+              <p className="mb-8 text-[var(--st-muted)] max-w-2xl">
                 Five objects that show motion or brightness change. Pick one and open it in the blink viewer.
               </p>
 
@@ -528,15 +536,15 @@ export default function HomePage() {
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true, margin: '-60px' }}
                       transition={{ duration: 0.7, ease: EASE, delay: i * 0.08 }}
-                      className={`text-left p-5 rounded-2xl border backdrop-blur-md transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-gold)] ${
+                      className={`text-left p-5 rounded-sm border backdrop-blur-md transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--st-gold)] ${
                         i === active
-                          ? 'border-[var(--accent-cyan)] bg-[rgba(13,18,32,0.9)] shadow-[inset_0_0_0_1px_var(--accent-cyan)]'
-                          : 'border-[var(--border-subtle)] bg-[rgba(13,18,32,0.7)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]'
+                          ? 'border-[var(--st-gold)] bg-[rgba(18,19,24,0.9)] shadow-[inset_0_0_0_1px_var(--st-gold)]'
+                          : 'border-[var(--st-line)] bg-[rgba(18,19,24,0.7)] text-[var(--st-muted)] hover:border-[var(--st-gold)]'
                       }`}
                     >
-                      <div className="font-mono text-xs font-bold mb-1" style={{ color: s.color }}>{s.badge}</div>
-                      <h3 className="text-lg font-bold text-[var(--text-primary)]">{s.title}</h3>
-                      <div className="font-mono text-xs text-[var(--accent-gold)]">
+                      <div className="font-mono text-xs font-semibold mb-1" style={{ color: s.color }}>{s.badge}</div>
+                      <h3 className="text-lg font-semibold text-[var(--st-ivory)]">{s.title}</h3>
+                      <div className="font-mono text-xs text-[var(--st-gold)]">
                         {s.sector} ({s.ra.toFixed(2)}°, {s.dec >= 0 ? '+' : ''}{s.dec.toFixed(2)}°)
                       </div>
                       <AnimatePresence initial={false}>
@@ -566,17 +574,17 @@ export default function HomePage() {
                 >
                   <div
                     aria-hidden="true"
-                    className="relative aspect-[1.6] lg:aspect-[2] rounded-xl overflow-hidden bg-[radial-gradient(circle,rgba(0,229,255,0.08),transparent_70%)]"
+                    className="relative aspect-[1.6] lg:aspect-[2] rounded-sm overflow-hidden bg-[radial-gradient(circle,rgba(212,175,55,0.08),transparent_70%)]"
                   >
                     {[30, 55, 80].map((w) => (
                       <i
                         key={w}
-                        className="absolute left-1/2 top-1/2 rounded-full border border-[rgba(0,229,255,0.28)] -translate-x-1/2 -translate-y-1/2 aspect-square"
+                        className="absolute left-1/2 top-1/2 rounded-full border border-[rgba(212,175,55,0.28)] -translate-x-1/2 -translate-y-1/2 aspect-square"
                         style={{ width: `${w}%` }}
                       />
                     ))}
                     <motion.span
-                      className="absolute left-1/2 top-1/2 h-[2px] w-1/2 origin-left bg-gradient-to-r from-[var(--accent-cyan)] to-transparent"
+                      className="absolute left-1/2 top-1/2 h-[2px] w-1/2 origin-left bg-gradient-to-r from-[var(--st-gold)] to-transparent"
                       animate={{ rotate: 360 }}
                       transition={{ repeat: Infinity, duration: 6, ease: 'linear' }}
                     />
@@ -596,9 +604,9 @@ export default function HomePage() {
                       className="grid grid-cols-3 gap-3"
                     >
                       {target.metrics.map((m) => (
-                        <div key={m.label} className="p-3 rounded-lg border border-[var(--border-subtle)] bg-[rgba(0,0,0,0.35)]">
-                          <div className="font-mono text-xs text-[var(--text-secondary)] mb-1">{m.label}</div>
-                          <div className="text-sm font-bold">{m.value}</div>
+                        <div key={m.label} className="p-3 rounded-sm border border-[var(--st-line)] bg-[rgba(0,0,0,0.35)]">
+                          <div className="font-mono text-xs text-[var(--st-muted)] mb-1">{m.label}</div>
+                          <div className="text-sm font-semibold">{m.value}</div>
                         </div>
                       ))}
                     </motion.div>
@@ -606,7 +614,7 @@ export default function HomePage() {
 
                   <Link
                     href={blinkUrl(target.ra, target.dec, target.fov)}
-                    className="py-3 rounded-xl bg-[var(--accent-cyan)] text-[#060810] text-sm font-bold flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(0,229,255,0.5)] transition-all"
+                    className="py-3 rounded-sm bg-[var(--st-gold)] text-[#0a0b0f] text-xs font-mono font-semibold uppercase tracking-[0.12em] flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(212,175,55,0.5)] transition-all"
                   >
                     Open in blink viewer <ArrowRight className="w-4 h-4" />
                   </Link>
@@ -617,7 +625,7 @@ export default function HomePage() {
 
           {/* TOOLS */}
           <section id="capabilities" className="max-w-6xl mx-auto px-5 py-28 scroll-mt-20">
-            <h2 className="mt-4 mb-9 text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+            <h2 className="mt-4 mb-9 text-3xl sm:text-4xl st-serif font-normal tracking-tight leading-tight">
               <SplitWords text="Simple tools for" />{' '}
               <SplitWords text="spotting motion." wordClass={GRAD} delay={0.25} />
             </h2>
@@ -633,14 +641,14 @@ export default function HomePage() {
                 >
                   <Link
                     href={href}
-                    className={`group grid md:grid-cols-[56px_1fr_1.3fr_auto] gap-2 md:gap-6 items-center p-6 hover:border-[var(--accent-cyan)] transition-colors ${PANEL}`}
+                    className={`group grid md:grid-cols-[56px_1fr_1.3fr_auto] gap-2 md:gap-6 items-center p-6 hover:border-[var(--st-gold)] transition-colors ${PANEL}`}
                   >
-                    <span className={`text-[var(--accent-cyan)] ${LABEL}`}>{num}</span>
-                    <h3 className="text-xl font-bold flex items-center gap-2">
-                      <Icon className="w-5 h-5 text-[var(--accent-orange)] transition-transform duration-500 group-hover:rotate-12 group-hover:scale-125" /> {title}
+                    <span className={`text-[var(--st-gold)] ${LABEL}`}>{num}</span>
+                    <h3 className="text-xl font-semibold flex items-center gap-2">
+                      <Icon className="w-5 h-5 text-[var(--st-gold-soft)] transition-transform duration-500 group-hover:rotate-12 group-hover:scale-125" /> {title}
                     </h3>
-                    <p className="text-sm text-[var(--text-secondary)]">{desc}</p>
-                    <span className={`text-[var(--accent-cyan)] ${LABEL} transition-transform duration-300 group-hover:translate-x-2`}>{cta} →</span>
+                    <p className="text-sm text-[var(--st-muted)]">{desc}</p>
+                    <span className={`text-[var(--st-gold)] ${LABEL} transition-transform duration-300 group-hover:translate-x-2`}>{cta} →</span>
                   </Link>
                 </motion.div>
               ))}
@@ -658,15 +666,15 @@ export default function HomePage() {
             >
               <motion.div
                 aria-hidden="true"
-                className="pointer-events-none absolute -top-1/2 left-1/2 h-[120%] w-[80%] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(0,229,255,0.14),transparent_65%)]"
+                className="pointer-events-none absolute -top-1/2 left-1/2 h-[120%] w-[80%] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(212,175,55,0.14),transparent_65%)]"
                 animate={{ scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
                 transition={{ repeat: Infinity, duration: 7, ease: 'easeInOut' }}
               />
-              <h2 className="relative text-3xl sm:text-5xl font-extrabold tracking-tight mb-4">
+              <h2 className="relative text-3xl sm:text-5xl st-serif font-normal tracking-tight mb-4">
                 <SplitWords text="Start looking." wordClass={GRAD} />
               </h2>
               <Reveal delay={0.3} className="relative">
-                <p className="max-w-xl mx-auto text-[var(--text-secondary)] mb-8">
+                <p className="max-w-xl mx-auto text-[var(--st-muted)] mb-8">
                   Pick any patch of sky and see how it changes. New discoveries need many eyes.
                 </p>
               </Reveal>
@@ -674,16 +682,16 @@ export default function HomePage() {
                 <div className="flex flex-wrap justify-center gap-4">
                   <Magnetic>
                     <Link
-                      href="/compare"
-                      className="inline-block px-6 py-3.5 rounded-xl bg-[var(--accent-cyan)] text-[#060810] font-bold text-sm hover:shadow-[0_0_24px_rgba(0,229,255,0.6)] transition-all"
+                      href="/explore"
+                      className="inline-block px-6 py-3.5 rounded-sm bg-[var(--st-gold)] text-[#0a0b0f] font-semibold text-sm hover:shadow-[0_0_24px_rgba(212,175,55,0.6)] transition-all"
                     >
-                      Start Investigating
+                      Launch 3D Explorer
                     </Link>
                   </Magnetic>
                   <Magnetic>
                     <a
                       href="#how"
-                      className="inline-block px-6 py-3.5 rounded-xl border border-[var(--border-subtle)] bg-[rgba(13,18,32,0.85)] text-sm font-semibold hover:border-[var(--border-hover)] transition-all"
+                      className="inline-block px-6 py-3.5 rounded-sm border border-[var(--st-line)] bg-[rgba(18,19,24,0.85)] text-sm font-semibold hover:border-[var(--st-gold)] transition-all"
                     >
                       How it works
                     </a>
@@ -694,12 +702,13 @@ export default function HomePage() {
           </section>
         </main>
 
-        <footer className="relative z-20 px-6 py-6 border-t border-[var(--border-subtle)] bg-[rgba(6,8,16,0.85)] text-sm text-[var(--text-secondary)] flex flex-col sm:flex-row items-center justify-between gap-4">
+        <footer className="relative z-20 px-6 py-6 border-t border-[var(--st-line)] bg-[rgba(10,11,15,0.85)] text-sm text-[var(--st-muted)] flex flex-col sm:flex-row items-center justify-between gap-4">
           <span>
-            SkyTrace · NASA Space Apps Challenge 2026 · <span className="text-[var(--accent-cyan)]">SPHEREx {RELEASE} release</span>
+            SkyTrace · NASA Space Apps Challenge 2026 · <span className="text-[var(--st-gold)]">SPHEREx {RELEASE} release</span>
           </span>
           <span className="flex items-center gap-5">
-            <Link href="/compare" className="hover:text-white transition-colors">Compare Viewer</Link>
+            <Link href="/explore" className="hover:text-white transition-colors">3D Explorer</Link>
+            <Link href="/compare" className="hover:text-white transition-colors">Blink Viewer</Link>
             <a
               href="https://irsa.ipac.caltech.edu/Missions/spherex.html"
               target="_blank"
