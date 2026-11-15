@@ -91,7 +91,7 @@ export default function ObservationTimeline({
             onClick={() => setSelectedArrayId(null)}
             className={`px-2 py-0.5 rounded transition-all ${
               selectedArrayId === null
-                ? 'bg-[var(--accent-cyan)] text-[#060810] font-bold'
+                ? 'bg-[var(--accent-cyan)] text-[#0a0b0f] font-bold'
                 : 'bg-[rgba(255,255,255,0.05)] text-[var(--text-secondary)] hover:text-white'
             }`}
           >
@@ -110,9 +110,9 @@ export default function ObservationTimeline({
                 }}
                 className={`px-2 py-0.5 rounded transition-all ${
                   selectedArrayId === arr.id
-                    ? 'bg-[var(--accent-orange)] text-[#060810] font-bold'
+                    ? 'bg-[var(--accent-orange)] text-[#0a0b0f] font-bold'
                     : isCurrent
-                    ? 'border border-[var(--accent-cyan)] text-[var(--accent-cyan)] bg-[rgba(0,229,255,0.08)]'
+                    ? 'border border-[var(--accent-cyan)] text-[var(--accent-cyan)] bg-[rgba(212,175,55,0.08)]'
                     : 'bg-[rgba(255,255,255,0.04)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                 }`}
               >
@@ -156,12 +156,12 @@ export default function ObservationTimeline({
                 {/* Epoch Selection Marker Badge */}
                 <div className="h-5 flex items-center justify-center">
                   {isA && (
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-[var(--accent-cyan)] text-[#060810] shadow-[0_0_8px_rgba(0,229,255,0.5)]">
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-[var(--accent-cyan)] text-[#0a0b0f] shadow-[0_0_8px_rgba(212,175,55,0.5)]">
                       Epoch A
                     </span>
                   )}
                   {isB && (
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-[var(--accent-orange)] text-[#060810] shadow-[0_0_8px_rgba(255,107,53,0.5)]">
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-[var(--accent-orange)] text-[#0a0b0f] shadow-[0_0_8px_rgba(200,121,58,0.5)]">
                       Epoch B
                     </span>
                   )}
@@ -171,10 +171,10 @@ export default function ObservationTimeline({
                 <div
                   className={`w-4 h-4 rounded-full border-2 transition-all my-1.5 flex items-center justify-center ${
                     isA
-                      ? 'border-[var(--accent-cyan)] bg-[var(--accent-cyan)] scale-125 shadow-[0_0_12px_rgba(0,229,255,0.8)]'
+                      ? 'border-[var(--accent-cyan)] bg-[var(--accent-cyan)] scale-125 shadow-[0_0_12px_rgba(212,175,55,0.8)]'
                       : isB
-                      ? 'border-[var(--accent-orange)] bg-[var(--accent-orange)] scale-125 shadow-[0_0_12px_rgba(255,107,53,0.8)]'
-                      : 'border-[rgba(255,255,255,0.3)] bg-[#060810] group-hover:scale-125'
+                      ? 'border-[var(--accent-orange)] bg-[var(--accent-orange)] scale-125 shadow-[0_0_12px_rgba(200,121,58,0.8)]'
+                      : 'border-[rgba(255,255,255,0.3)] bg-[#0a0b0f] group-hover:scale-125'
                   }`}
                   style={{
                     boxShadow: !isA && !isB ? `0 0 8px ${dotColor}` : undefined,
@@ -182,7 +182,7 @@ export default function ObservationTimeline({
                 >
                   <div
                     className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: isA || isB ? '#060810' : dotColor }}
+                    style={{ backgroundColor: isA || isB ? '#0a0b0f' : dotColor }}
                   />
                 </div>
 
@@ -219,7 +219,7 @@ export default function ObservationTimeline({
             href={`/compare?obs_a=${encodeURIComponent(selectedObsA.id)}&obs_b=${encodeURIComponent(
               selectedObsB.id
             )}&band=${selectedBand}`}
-            className="px-4 py-1.5 rounded-lg bg-[var(--accent-cyan)] text-[#060810] font-bold text-xs flex items-center gap-1.5 shadow-[0_0_12px_rgba(0,229,255,0.4)] hover:shadow-[0_0_16px_rgba(0,229,255,0.6)] transition-all"
+            className="px-4 py-1.5 rounded-sm bg-[var(--accent-cyan)] text-[#0a0b0f] font-bold text-xs flex items-center gap-1.5 shadow-[0_0_12px_rgba(212,175,55,0.4)] hover:shadow-[0_0_16px_rgba(212,175,55,0.6)] transition-all"
           >
             <span>Compare Epoch A & B</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -227,7 +227,7 @@ export default function ObservationTimeline({
         ) : (
           <button
             disabled
-            className="px-3.5 py-1.5 rounded-lg bg-[rgba(255,255,255,0.05)] text-[var(--text-muted)] text-xs font-semibold cursor-not-allowed"
+            className="px-3.5 py-1.5 rounded-sm bg-[rgba(255,255,255,0.05)] text-[var(--text-muted)] text-xs font-semibold cursor-not-allowed"
           >
             Select 2 Passes to Compare
           </button>

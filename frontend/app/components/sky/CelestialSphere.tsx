@@ -65,7 +65,7 @@ function updateTargetBadgeCanvas(
 
   // Outer Holographic Glow Background
   ctx.fillStyle = 'rgba(6, 12, 28, 0.85)';
-  ctx.strokeStyle = 'rgba(0, 229, 255, 0.45)';
+  ctx.strokeStyle = 'rgba(212,175,55, 0.45)';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   if (ctx.roundRect) {
@@ -77,7 +77,7 @@ function updateTargetBadgeCanvas(
   ctx.stroke();
 
   // Corner Accent Brackets
-  ctx.strokeStyle = '#00e5ff';
+  ctx.strokeStyle = '#D4AF37';
   ctx.lineWidth = 2.5;
   // Top-left
   ctx.beginPath();
@@ -106,7 +106,7 @@ function updateTargetBadgeCanvas(
 
   // Target Title
   ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
-  ctx.fillStyle = '#00e5ff';
+  ctx.fillStyle = '#D4AF37';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(targetTitle.toUpperCase(), w / 2, 42);
@@ -2409,7 +2409,7 @@ export default function CelestialSphere({ onCoordinateClick, className }: Celest
       ref={containerRef}
       className={`relative w-full h-full overflow-hidden select-none ${className || ''}`}
       style={{
-        background: 'radial-gradient(ellipse at center, #0a1128 0%, #060810 75%, #030408 100%)',
+        background: 'radial-gradient(ellipse at center, #0a1128 0%, #0a0b0f 75%, #030408 100%)',
       }}
     />
   );

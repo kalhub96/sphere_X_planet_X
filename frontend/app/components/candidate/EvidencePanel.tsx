@@ -152,12 +152,12 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: '100%', opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-        className="fixed top-0 right-0 bottom-0 w-full max-w-lg z-50 bg-[rgba(6,8,16,0.96)] border-l border-[var(--border-subtle)] shadow-[-16px_0_40px_rgba(0,0,0,0.85)] backdrop-blur-2xl flex flex-col font-sans overflow-hidden"
+        className="fixed top-0 right-0 bottom-0 w-full max-w-lg z-50 bg-[rgba(10,11,15,0.96)] border-l border-[var(--border-subtle)] shadow-[-16px_0_40px_rgba(0,0,0,0.85)] backdrop-blur-2xl flex flex-col font-sans overflow-hidden"
       >
         {/* Header */}
-        <div className="p-5 border-b border-[var(--border-subtle)] flex items-center justify-between bg-[rgba(13,18,32,0.6)]">
+        <div className="p-5 border-b border-[var(--border-subtle)] flex items-center justify-between bg-[rgba(18,19,24,0.6)]">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-[rgba(0,229,255,0.12)] text-[var(--accent-cyan)] border border-[rgba(0,229,255,0.25)]">
+            <div className="p-2 rounded-sm bg-[rgba(212,175,55,0.12)] text-[var(--accent-cyan)] border border-[rgba(212,175,55,0.25)]">
               <FileText className="w-5 h-5" />
             </div>
             <div>
@@ -184,7 +184,7 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-white hover:bg-[rgba(255,255,255,0.08)] transition-colors"
+            className="p-1.5 rounded-sm text-[var(--text-secondary)] hover:text-white hover:bg-[rgba(255,255,255,0.08)] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -235,8 +235,8 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
           <div
             className={`glass-panel p-4 border space-y-2.5 ${
               crossMatch.matched
-                ? 'border-[rgba(255,107,53,0.4)] bg-[rgba(255,107,53,0.06)]'
-                : 'border-[rgba(6,214,160,0.4)] bg-[rgba(6,214,160,0.05)]'
+                ? 'border-[rgba(200,121,58,0.4)] bg-[rgba(200,121,58,0.06)]'
+                : 'border-[rgba(143,188,143,0.4)] bg-[rgba(143,188,143,0.05)]'
             }`}
           >
             <div className="flex items-center justify-between">
@@ -247,8 +247,8 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
               <span
                 className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
                   crossMatch.matched
-                    ? 'bg-[rgba(255,107,53,0.2)] text-[var(--accent-orange)]'
-                    : 'bg-[rgba(6,214,160,0.2)] text-[var(--accent-green)]'
+                    ? 'bg-[rgba(200,121,58,0.2)] text-[var(--accent-orange)]'
+                    : 'bg-[rgba(143,188,143,0.2)] text-[var(--accent-green)]'
                 }`}
               >
                 {crossMatch.matched ? 'SOLAR SYSTEM MATCH' : 'CLEAN (>60″)'}
@@ -259,7 +259,7 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
               {crossMatch.explanation}
             </p>
 
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-mono bg-[rgba(0,0,0,0.3)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+            <div className="grid grid-cols-2 gap-2 text-[11px] font-mono bg-[rgba(0,0,0,0.3)] p-2.5 rounded-sm border border-[var(--border-subtle)]">
               <div>
                 <span className="text-[10px] text-[var(--text-muted)] block">Nearest Body</span>
                 <span className="text-[var(--text-primary)] font-bold">{crossMatch.nearest_body}</span>
@@ -279,8 +279,8 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
           <div
             className={`glass-panel p-3.5 border flex items-center justify-between ${
               isNearBoundary
-                ? 'border-[rgba(239,71,111,0.4)] bg-[rgba(239,71,111,0.08)]'
-                : 'border-[rgba(0,229,255,0.25)] bg-[rgba(0,229,255,0.03)]'
+                ? 'border-[rgba(224,113,95,0.4)] bg-[rgba(224,113,95,0.08)]'
+                : 'border-[rgba(212,175,55,0.25)] bg-[rgba(212,175,55,0.03)]'
             }`}
           >
             <div className="flex items-center gap-2.5">
@@ -303,8 +303,8 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
             <span
               className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
                 isNearBoundary
-                  ? 'bg-[rgba(239,71,111,0.2)] text-[var(--danger)]'
-                  : 'bg-[rgba(0,229,255,0.2)] text-[var(--accent-cyan)]'
+                  ? 'bg-[rgba(224,113,95,0.2)] text-[var(--danger)]'
+                  : 'bg-[rgba(212,175,55,0.2)] text-[var(--accent-cyan)]'
               }`}
             >
               {isNearBoundary ? 'CAUTION' : 'PASS'}
@@ -330,21 +330,21 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-              <div className="bg-[rgba(0,0,0,0.3)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+              <div className="bg-[rgba(0,0,0,0.3)] p-2.5 rounded-sm border border-[var(--border-subtle)]">
                 <span className="text-[10px] text-[var(--text-muted)] block">Right Ascension (α)</span>
                 <span className="text-[var(--text-primary)] font-bold">{candidate.ra_deg.toFixed(5)}°</span>
               </div>
-              <div className="bg-[rgba(0,0,0,0.3)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+              <div className="bg-[rgba(0,0,0,0.3)] p-2.5 rounded-sm border border-[var(--border-subtle)]">
                 <span className="text-[10px] text-[var(--text-muted)] block">Declination (δ)</span>
                 <span className="text-[var(--text-primary)] font-bold">
                   {candidate.dec_deg >= 0 ? `+${candidate.dec_deg.toFixed(5)}` : candidate.dec_deg.toFixed(5)}°
                 </span>
               </div>
-              <div className="bg-[rgba(0,0,0,0.3)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+              <div className="bg-[rgba(0,0,0,0.3)] p-2.5 rounded-sm border border-[var(--border-subtle)]">
                 <span className="text-[10px] text-[var(--text-muted)] block">SNR Change (ΔSNR)</span>
                 <span className="text-[var(--accent-cyan)] font-bold">+{candidate.snr_change.toFixed(1)}σ</span>
               </div>
-              <div className="bg-[rgba(0,0,0,0.3)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+              <div className="bg-[rgba(0,0,0,0.3)] p-2.5 rounded-sm border border-[var(--border-subtle)]">
                 <span className="text-[10px] text-[var(--text-muted)] block">Pixel Centroid (X, Y)</span>
                 <span className="text-[var(--text-primary)] font-bold">
                   ({candidate.pixel_x.toFixed(1)}, {candidate.pixel_y.toFixed(1)})
@@ -354,7 +354,7 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
 
             {/* Parallax & Distance if detected */}
             {candidate.parallax_distance_pc && (
-              <div className="bg-[rgba(255,209,102,0.1)] border border-[rgba(255,209,102,0.3)] p-3 rounded-lg text-xs font-mono">
+              <div className="bg-[rgba(230,198,92,0.1)] border border-[rgba(230,198,92,0.3)] p-3 rounded-sm text-xs font-mono">
                 <div className="text-[var(--accent-gold)] font-bold mb-1 flex items-center gap-1.5">
                   <CheckCircle className="w-3.5 h-3.5" /> Annual Parallax Detected across 2 AU Baseline
                 </div>
@@ -433,7 +433,7 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
                 <Quote className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
                 <span>SPHEREx QR3 Dataset Citation</span>
               </div>
-              <span className="text-[10px] font-mono text-[var(--accent-cyan)] bg-[rgba(0,229,255,0.1)] px-2 py-0.5 rounded border border-[rgba(0,229,255,0.2)]">
+              <span className="text-[10px] font-mono text-[var(--accent-cyan)] bg-[rgba(212,175,55,0.1)] px-2 py-0.5 rounded border border-[rgba(212,175,55,0.2)]">
                 DOI: 10.26131/IRSA662
               </span>
             </div>
@@ -462,11 +462,11 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-[var(--border-subtle)] bg-[rgba(13,18,32,0.85)] flex items-center justify-between gap-2">
+        <div className="p-4 border-t border-[var(--border-subtle)] bg-[rgba(18,19,24,0.85)] flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportJSON}
-              className="px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.15)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-primary)] transition-all flex items-center gap-1.5"
+              className="px-3 py-2 rounded-sm bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.15)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-primary)] transition-all flex items-center gap-1.5"
             >
               <Download className="w-3.5 h-3.5" />
               <span>JSON</span>
@@ -474,7 +474,7 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
 
             <button
               onClick={handleExportCSV}
-              className="px-3 py-2 rounded-lg bg-[rgba(0,229,255,0.12)] hover:bg-[rgba(0,229,255,0.22)] border border-[rgba(0,229,255,0.3)] text-xs font-semibold text-[var(--accent-cyan)] transition-all flex items-center gap-1.5"
+              className="px-3 py-2 rounded-sm bg-[rgba(212,175,55,0.12)] hover:bg-[rgba(212,175,55,0.22)] border border-[rgba(212,175,55,0.3)] text-xs font-semibold text-[var(--accent-cyan)] transition-all flex items-center gap-1.5"
             >
               <Download className="w-3.5 h-3.5" />
               <span>CSV</span>
@@ -483,7 +483,7 @@ export default function EvidencePanel({ candidate, onClose }: EvidencePanelProps
 
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-[var(--accent-cyan)] text-[#060810] text-xs font-bold hover:shadow-[0_0_12px_rgba(0,229,255,0.4)] transition-all"
+            className="px-4 py-2 rounded-sm bg-[var(--accent-cyan)] text-[#0a0b0f] text-xs font-bold hover:shadow-[0_0_12px_rgba(212,175,55,0.4)] transition-all"
           >
             Dismiss Dossier
           </button>

@@ -123,7 +123,7 @@ export default function SkyHUD() {
             </span>
           </div>
           {activePresetName && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-[rgba(0,229,255,0.15)] text-[var(--accent-cyan)] border border-[rgba(0,229,255,0.3)]">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-[rgba(212,175,55,0.15)] text-[var(--accent-cyan)] border border-[rgba(212,175,55,0.3)]">
               {activePresetName}
             </span>
           )}
@@ -140,19 +140,19 @@ export default function SkyHUD() {
                 if (searchQuery.trim() && searchResults.length > 0) setShowDropdown(true);
               }}
               placeholder="Search target or coords (e.g. Sedna, M42, WISE)..."
-              className="w-full bg-[rgba(6,8,16,0.9)] border border-[var(--border-subtle)] focus:border-[var(--accent-cyan)] rounded-lg pl-8 pr-3 py-1.5 text-xs font-mono text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] transition-colors"
+              className="w-full bg-[rgba(10,11,15,0.9)] border border-[var(--border-subtle)] focus:border-[var(--accent-cyan)] rounded-sm pl-8 pr-3 py-1.5 text-xs font-mono text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] transition-colors"
             />
             <Search className="w-3.5 h-3.5 text-[var(--text-muted)] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </form>
 
           {/* Autocomplete Dropdown */}
           {showDropdown && searchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-[rgba(6,8,16,0.95)] border border-[var(--border-subtle)] rounded-lg shadow-2xl overflow-hidden z-50 backdrop-blur-xl">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-[rgba(10,11,15,0.95)] border border-[var(--border-subtle)] rounded-sm shadow-2xl overflow-hidden z-50 backdrop-blur-xl">
               {searchResults.map((item) => (
                 <div
                   key={item.name}
                   onClick={() => handleSelectTarget(item)}
-                  className="p-2 hover:bg-[rgba(0,229,255,0.1)] cursor-pointer border-b border-[rgba(255,255,255,0.05)] last:border-b-0 transition-colors"
+                  className="p-2 hover:bg-[rgba(212,175,55,0.1)] cursor-pointer border-b border-[rgba(255,255,255,0.05)] last:border-b-0 transition-colors"
                 >
                   <div className="flex items-center justify-between text-xs font-mono">
                     <span className="font-bold text-[var(--text-primary)]">{item.name}</span>
@@ -170,7 +170,7 @@ export default function SkyHUD() {
         </div>
 
         {/* Equatorial Readout */}
-        <div className="grid grid-cols-2 gap-2 mb-3 bg-[rgba(0,0,0,0.3)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+        <div className="grid grid-cols-2 gap-2 mb-3 bg-[rgba(0,0,0,0.3)] p-2.5 rounded-sm border border-[var(--border-subtle)]">
           <div>
             <div className="text-[10px] uppercase font-mono text-[var(--text-secondary)]">
               Right Ascension (α)
@@ -196,7 +196,7 @@ export default function SkyHUD() {
         </div>
 
         {/* Dual Coordinate Systems (Galactic & Ecliptic) */}
-        <div className="grid grid-cols-2 gap-2 text-xs font-mono mb-3 text-[var(--text-secondary)] bg-[rgba(13,18,32,0.4)] p-2 rounded">
+        <div className="grid grid-cols-2 gap-2 text-xs font-mono mb-3 text-[var(--text-secondary)] bg-[rgba(18,19,24,0.4)] p-2 rounded">
           <div>
             <div className="flex items-center gap-1 text-[10px] text-[var(--accent-purple)]">
               <Globe className="w-3 h-3" /> Galactic (l, b)
@@ -223,7 +223,7 @@ export default function SkyHUD() {
             value={inputRa}
             onChange={(e) => setInputRa(e.target.value)}
             placeholder="RA deg"
-            className="w-1/2 bg-[rgba(6,8,16,0.8)] border border-[var(--border-subtle)] focus:border-[var(--accent-cyan)] rounded px-2 py-1 text-xs font-mono text-[var(--text-primary)] outline-none"
+            className="w-1/2 bg-[rgba(10,11,15,0.8)] border border-[var(--border-subtle)] focus:border-[var(--accent-cyan)] rounded px-2 py-1 text-xs font-mono text-[var(--text-primary)] outline-none"
           />
           <input
             type="number"
@@ -231,11 +231,11 @@ export default function SkyHUD() {
             value={inputDec}
             onChange={(e) => setInputDec(e.target.value)}
             placeholder="Dec deg"
-            className="w-1/2 bg-[rgba(6,8,16,0.8)] border border-[var(--border-subtle)] focus:border-[var(--accent-cyan)] rounded px-2 py-1 text-xs font-mono text-[var(--text-primary)] outline-none"
+            className="w-1/2 bg-[rgba(10,11,15,0.8)] border border-[var(--border-subtle)] focus:border-[var(--accent-cyan)] rounded px-2 py-1 text-xs font-mono text-[var(--text-primary)] outline-none"
           />
           <button
             type="submit"
-            className="bg-[rgba(0,229,255,0.15)] hover:bg-[var(--accent-cyan)] hover:text-[#060810] border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-2.5 py-1 rounded text-xs font-medium transition-colors flex items-center gap-1"
+            className="bg-[rgba(212,175,55,0.15)] hover:bg-[var(--accent-cyan)] hover:text-[#0a0b0f] border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-2.5 py-1 rounded text-xs font-medium transition-colors flex items-center gap-1"
           >
             <Navigation className="w-3 h-3" /> Slew
           </button>
@@ -257,7 +257,7 @@ export default function SkyHUD() {
                 }}
                 className={`text-[11px] px-2 py-1 rounded transition-all ${
                   activePresetName === preset.name
-                    ? 'bg-[var(--accent-cyan)] text-[#060810] font-semibold'
+                    ? 'bg-[var(--accent-cyan)] text-[#0a0b0f] font-semibold'
                     : 'bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.12)] text-[var(--text-primary)] border border-[var(--border-subtle)]'
                 }`}
               >
@@ -272,8 +272,8 @@ export default function SkyHUD() {
       <div
         className={`glass-panel p-3 pointer-events-auto transition-all ${
           viewMode === 'spacecraft'
-            ? 'border border-[var(--accent-cyan)] shadow-[0_0_15px_rgba(0,229,255,0.15)] bg-[rgba(13,18,32,0.95)]'
-            : 'bg-[rgba(13,18,32,0.85)]'
+            ? 'border border-[var(--accent-cyan)] shadow-[0_0_15px_rgba(212,175,55,0.15)] bg-[rgba(18,19,24,0.95)]'
+            : 'bg-[rgba(18,19,24,0.85)]'
         }`}
       >
         <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-[var(--border-subtle)]">
@@ -284,8 +284,8 @@ export default function SkyHUD() {
           <span
             className={`text-[9px] font-mono px-1.5 py-0.5 rounded uppercase font-semibold ${
               viewMode === 'spacecraft'
-                ? 'bg-[var(--accent-cyan)] text-[#060810]'
-                : 'bg-[rgba(0,229,255,0.1)] text-[var(--accent-cyan)] border border-[rgba(0,229,255,0.3)]'
+                ? 'bg-[var(--accent-cyan)] text-[#0a0b0f]'
+                : 'bg-[rgba(212,175,55,0.1)] text-[var(--accent-cyan)] border border-[rgba(212,175,55,0.3)]'
             }`}
           >
             {viewMode === 'spacecraft' ? 'LEO Orbit' : 'Boresight Lock'}

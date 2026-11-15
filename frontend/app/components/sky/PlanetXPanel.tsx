@@ -111,7 +111,7 @@ export default function PlanetXPanel({ onClose }: { onClose: () => void }) {
       <select
         value={preset}
         onChange={(e) => { setPreset(e.target.value); setVals({ ...PLANET_X_PRESETS[e.target.value] }); }}
-        className="w-full mb-2 bg-[rgba(6,8,16,0.6)] border border-[var(--border-subtle)] rounded px-2 py-1 text-xs"
+        className="w-full mb-2 bg-[rgba(10,11,15,0.6)] border border-[var(--border-subtle)] rounded px-2 py-1 text-xs"
       >
         {presetNames.map((n) => <option key={n}>{n}</option>)}
       </select>
@@ -122,20 +122,20 @@ export default function PlanetXPanel({ onClose }: { onClose: () => void }) {
             <input
               type="number" step={f.step} value={Number.isNaN(vals[f.key]) ? '' : vals[f.key]}
               onChange={(e) => set(f.key, parseFloat(e.target.value))}
-              className="w-full bg-[rgba(6,8,16,0.6)] border border-[var(--border-subtle)] rounded px-2 py-1 text-xs text-[var(--text-primary)]"
+              className="w-full bg-[rgba(10,11,15,0.6)] border border-[var(--border-subtle)] rounded px-2 py-1 text-xs text-[var(--text-primary)]"
             />
           </label>
         ))}
       </div>
       <div className="grid grid-cols-3 gap-2 mb-3">
         <label className="text-[10px] font-mono text-[var(--text-muted)]">From
-          <input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="w-full bg-[rgba(6,8,16,0.6)] border border-[var(--border-subtle)] rounded px-1 py-1 text-xs" />
+          <input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="w-full bg-[rgba(10,11,15,0.6)] border border-[var(--border-subtle)] rounded px-1 py-1 text-xs" />
         </label>
         <label className="text-[10px] font-mono text-[var(--text-muted)]">To
-          <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="w-full bg-[rgba(6,8,16,0.6)] border border-[var(--border-subtle)] rounded px-1 py-1 text-xs" />
+          <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="w-full bg-[rgba(10,11,15,0.6)] border border-[var(--border-subtle)] rounded px-1 py-1 text-xs" />
         </label>
         <label className="text-[10px] font-mono text-[var(--text-muted)]">Step
-          <select value={step} onChange={(e) => setStep(e.target.value)} className="w-full bg-[rgba(6,8,16,0.6)] border border-[var(--border-subtle)] rounded px-1 py-1 text-xs">
+          <select value={step} onChange={(e) => setStep(e.target.value)} className="w-full bg-[rgba(10,11,15,0.6)] border border-[var(--border-subtle)] rounded px-1 py-1 text-xs">
             {STEPS.map((s) => <option key={s}>{s}</option>)}
           </select>
         </label>
@@ -154,7 +154,7 @@ export default function PlanetXPanel({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Top-down comparison with the planets (log radial scale) */}
-          <svg viewBox="0 0 300 300" className="w-full rounded-lg bg-[rgba(6,8,16,0.6)] border border-[var(--border-subtle)] mb-1">
+          <svg viewBox="0 0 300 300" className="w-full rounded-sm bg-[rgba(10,11,15,0.6)] border border-[var(--border-subtle)] mb-1">
             {RINGS.map((r) => (
               <g key={r}>
                 <circle cx={S} cy={S} r={warpRadius(r) * k} fill="none" stroke="#ffffff" strokeOpacity="0.12" strokeDasharray="2 3" />
@@ -164,7 +164,7 @@ export default function PlanetXPanel({ onClose }: { onClose: () => void }) {
             {planetData?.planets.map((p) => (
               <circle key={p.name} cx={S} cy={S} r={warpRadius(p.a_au) * k} fill="none" stroke={PLANET_COLORS[p.name]} strokeOpacity="0.5" />
             ))}
-            {ghostPath && <path d={ghostPath} fill="none" stroke="#9aa4bf" strokeWidth="1" strokeDasharray="4 3" opacity="0.7" />}
+            {ghostPath && <path d={ghostPath} fill="none" stroke="#9A9DA8" strokeWidth="1" strokeDasharray="4 3" opacity="0.7" />}
             <path d={mainPath} fill="none" stroke="#ff3df2" strokeWidth="1.4" />
             <circle cx={S} cy={S} r="3" fill="#fff07c" />
             {planetData?.planets.map((p) => {
@@ -172,8 +172,8 @@ export default function PlanetXPanel({ onClose }: { onClose: () => void }) {
               return <circle key={p.name} cx={cx} cy={cy} r="2.6" fill={PLANET_COLORS[p.name]}><title>{p.name} · {p.distance_au.toFixed(2)} AU</title></circle>;
             })}
             {(() => { const [cx, cy] = xy(pt.x_au, pt.y_au); return <circle cx={cx} cy={cy} r="5" fill="#ff3df2" stroke="#fff" strokeWidth="1"><title>Planet X</title></circle>; })()}
-            <text x="6" y="12" fontSize="8.5" fill="#9aa4bf">top-down · log distance scale · planets on {pt.datetime_utc.slice(0, 10)}</text>
-            {ghostPath && <text x="6" y="292" fontSize="8.5" fill="#9aa4bf">dashed = previous orbit (before your last change)</text>}
+            <text x="6" y="12" fontSize="8.5" fill="#9A9DA8">top-down · log distance scale · planets on {pt.datetime_utc.slice(0, 10)}</text>
+            {ghostPath && <text x="6" y="292" fontSize="8.5" fill="#9A9DA8">dashed = previous orbit (before your last change)</text>}
           </svg>
           <div className="flex flex-wrap gap-x-2 gap-y-0.5 mb-3 text-[9px] font-mono">
             {Object.entries(PLANET_COLORS).map(([n, c]) => (
@@ -183,7 +183,7 @@ export default function PlanetXPanel({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-            <div className="rounded-lg border border-[var(--border-subtle)] p-2">
+            <div className="rounded-sm border border-[var(--border-subtle)] p-2">
               <div className="text-[10px] uppercase text-[var(--accent-cyan)] mb-1">Orbit size</div>
               <div>a = {fmt(sm.semi_major_axis_au, 0)} AU</div>
               <div>Perihelion {fmt(sm.perihelion_au, 0)} AU</div>
@@ -191,13 +191,13 @@ export default function PlanetXPanel({ onClose }: { onClose: () => void }) {
               <div>Period {fmt(sm.period_years, 0)} yr</div>
               <div className="text-[var(--text-muted)]">= {fmt(sm.aphelion_au / 30.11, 1)}× Neptune&apos;s orbit</div>
             </div>
-            <div className="rounded-lg border border-[var(--border-subtle)] p-2">
+            <div className="rounded-sm border border-[var(--border-subtle)] p-2">
               <div className="text-[10px] uppercase text-[var(--accent-cyan)] mb-1">Mass (assumed)</div>
               <div>{fmt(sm.mass_earth, 1)} M⊕</div>
               <div>{fmt(sm.mass_jupiter, 3)} M♃</div>
               <div>Hill radius {fmt(sm.hill_radius_perihelion_au, 1)}–{fmt(sm.hill_radius_aphelion_au, 1)} AU</div>
             </div>
-            <div className="col-span-2 rounded-lg border border-[var(--border-subtle)] p-2">
+            <div className="col-span-2 rounded-sm border border-[var(--border-subtle)] p-2">
               <div className="text-[10px] uppercase text-[var(--accent-cyan)] mb-1">Location on {pt.datetime_utc.slice(0, 10)}</div>
               <div>Sun distance {fmt(pt.distance_au, 1)} AU · speed {fmt(pt.speed_kms, 3)} km/s</div>
               <div>Earth distance {fmt(pt.geocentric_distance_au, 1)} AU</div>

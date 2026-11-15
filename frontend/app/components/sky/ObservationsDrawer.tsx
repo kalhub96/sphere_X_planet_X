@@ -1,16 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
+import { Layers, Loader2, AlertCircle, Calendar, Sparkles, ArrowRight } from 'lucide-react';
 import { useSkyStore } from '../../store/skyStore';
 import { useObservations } from '../../hooks/useObservations';
-import { Layers, ArrowRight, Eye, Calendar, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 
 export default function ObservationsDrawer() {
   const {
     ra,
     dec,
-    radius,
+    fov,
     selectedBand,
     selectedObsA,
     selectedObsB,
@@ -21,9 +21,38 @@ export default function ObservationsDrawer() {
   const { data: observations, isLoading, error } = useObservations(
     ra,
     dec,
-    radius,
+    fov,
     selectedBand
   );
+
+  // Clear selections that no longer exist in the current result set
+  useEffect(() => {
+    if (!observations) return;
+    const ids = new Set(observations.map((o) => o.id));
+    if (selectedObsA && !ids.has(selectedObsA.id)) selectObsA(null);
+    if (selectedObsB && !ids.has(selectedObsB.id)) selectObsB(null);
+  }, [observations, selectedObsA, selectedObsB, selectObsA, selectObsB]);
+
+  const handleSelectA = (obs: NonNullable<typeof observations>[number], isSelectedA: boolean) => {
+    if (isSelectedA) {
+      selectObsA(null);
+      return;
+    }
+    // Prevent the same epoch being both A and B
+    if (selectedObsB?.id === obs.id) selectObsB(null);
+    selectObsA(obs);
+  };
+
+  const handleSelectB = (obs: NonNullable<typeof observations>[number], isSelectedB: boolean) => {
+    if (isSelectedB) {
+      selectObsB(null);
+      return;
+    }
+    if (selectedObsA?.id === obs.id) selectObsA(null);
+    selectObsB(obs);
+  };
+
+  const bothSelected = Boolean(selectedObsA && selectedObsB);
 
   return (
     <div className="glass-panel p-4 backdrop-blur-md">
@@ -35,7 +64,7 @@ export default function ObservationsDrawer() {
           </span>
         </div>
         <span className="text-xs font-mono text-[var(--text-secondary)]">
-          Field Coverage: r = {radius}°
+          Field Coverage: r = {Number.isFinite(fov) ? fov.toFixed(1) : '—'}°
         </span>
       </div>
 
@@ -47,9 +76,9 @@ export default function ObservationsDrawer() {
       )}
 
       {error && (
-        <div className="flex items-center gap-2 py-4 px-3 rounded bg-[rgba(239,71,111,0.1)] border border-[var(--danger)] text-xs text-[var(--danger)] font-mono">
+        <div className="flex items-center gap-2 py-4 px-3 rounded bg-[rgba(224,113,95,0.1)] border border-[var(--danger)] text-xs text-[var(--danger)] font-mono">
           <AlertCircle className="w-4 h-4 shrink-0" />
-          Archive query error: {(error as Error).message}
+          Archive query error: {error instanceof Error ? error.message : String(error)}
         </div>
       )}
 
@@ -75,20 +104,20 @@ export default function ObservationsDrawer() {
               return (
                 <div
                   key={obs.id}
-                  className={`p-2.5 rounded-lg border transition-all text-xs font-mono ${
+                  className={`p-2.5 rounded-sm border transition-all text-xs font-mono ${
                     isSelectedA
-                      ? 'bg-[rgba(0,229,255,0.15)] border-[var(--accent-cyan)] shadow-[0_0_12px_rgba(0,229,255,0.2)]'
+                      ? 'bg-[rgba(212,175,55,0.15)] border-[var(--accent-cyan)] shadow-[0_0_12px_rgba(212,175,55,0.2)]'
                       : isSelectedB
-                      ? 'bg-[rgba(255,107,53,0.15)] border-[var(--accent-orange)] shadow-[0_0_12px_rgba(255,107,53,0.2)]'
+                      ? 'bg-[rgba(200,121,58,0.15)] border-[var(--accent-orange)] shadow-[0_0_12px_rgba(200,121,58,0.2)]'
                       : 'bg-[rgba(0,0,0,0.3)] border-[var(--border-subtle)] hover:border-[var(--border-hover)]'
                   }`}
                 >
                   <div className="flex items-center justify-between font-semibold mb-1">
-                    <span className="text-[var(--text-primary)] truncate max-w-[140px]">
+                    <span className="text-[var(--text-primary)] truncate max-w-[140px]" title={obs.id}>
                       {obs.id}
                     </span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.06)] text-[var(--accent-gold)]">
-                      {obs.quality_pct.toFixed(0)}% Q
+                      {typeof obs.quality_pct === 'number' ? obs.quality_pct.toFixed(0) : '—'}% Q
                     </span>
                   </div>
 
@@ -101,21 +130,25 @@ export default function ObservationsDrawer() {
 
                   <div className="flex gap-1.5">
                     <button
-                      onClick={() => selectObsA(isSelectedA ? null : obs)}
+                      type="button"
+                      aria-pressed={isSelectedA}
+                      onClick={() => handleSelectA(obs, isSelectedA)}
                       className={`flex-1 py-1 rounded text-[10px] font-semibold transition-all ${
                         isSelectedA
-                          ? 'bg-[var(--accent-cyan)] text-[#060810]'
-                          : 'bg-[rgba(0,229,255,0.1)] text-[var(--accent-cyan)] hover:bg-[rgba(0,229,255,0.2)]'
+                          ? 'bg-[var(--accent-cyan)] text-[#0a0b0f]'
+                          : 'bg-[rgba(212,175,55,0.1)] text-[var(--accent-cyan)] hover:bg-[rgba(212,175,55,0.2)]'
                       }`}
                     >
                       {isSelectedA ? '✓ Epoch A' : 'Set as Epoch A'}
                     </button>
                     <button
-                      onClick={() => selectObsB(isSelectedB ? null : obs)}
+                      type="button"
+                      aria-pressed={isSelectedB}
+                      onClick={() => handleSelectB(obs, isSelectedB)}
                       className={`flex-1 py-1 rounded text-[10px] font-semibold transition-all ${
                         isSelectedB
-                          ? 'bg-[var(--accent-orange)] text-[#060810]'
-                          : 'bg-[rgba(255,107,53,0.1)] text-[var(--accent-orange)] hover:bg-[rgba(255,107,53,0.2)]'
+                          ? 'bg-[var(--accent-orange)] text-[#0a0b0f]'
+                          : 'bg-[rgba(200,121,58,0.1)] text-[var(--accent-orange)] hover:bg-[rgba(200,121,58,0.2)]'
                       }`}
                     >
                       {isSelectedB ? '✓ Epoch B' : 'Set as Epoch B'}
@@ -129,7 +162,7 @@ export default function ObservationsDrawer() {
           {/* Launch Comparison CTA */}
           <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between">
             <div className="text-[11px] font-mono text-[var(--text-secondary)]">
-              {selectedObsA && selectedObsB ? (
+              {bothSelected ? (
                 <span className="text-[var(--accent-green)] flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5" /> Epochs aligned & ready for diffing
                 </span>
@@ -144,15 +177,16 @@ export default function ObservationsDrawer() {
               <Link
                 href={`/compare?obs_a=${encodeURIComponent(selectedObsA.id)}&obs_b=${encodeURIComponent(
                   selectedObsB.id
-                )}&band=${selectedBand}`}
-                className="bg-[var(--accent-cyan)] hover:bg-[var(--accent-cyan)] hover:shadow-[0_0_16px_rgba(0,229,255,0.5)] text-[#060810] px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+                )}&band=${encodeURIComponent(String(selectedBand))}`}
+                className="bg-[var(--accent-cyan)] hover:shadow-[0_0_16px_rgba(212,175,55,0.5)] text-[#0a0b0f] px-4 py-2 rounded-sm text-xs font-bold transition-all flex items-center gap-1.5"
               >
                 Launch Blink Comparator <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             ) : (
               <button
+                type="button"
                 disabled
-                className="bg-[rgba(255,255,255,0.05)] text-[var(--text-muted)] px-4 py-2 rounded-lg text-xs font-medium cursor-not-allowed flex items-center gap-1.5"
+                className="bg-[rgba(255,255,255,0.05)] text-[var(--text-muted)] px-4 py-2 rounded-sm text-xs font-medium cursor-not-allowed flex items-center gap-1.5"
               >
                 Select 2 Epochs <ArrowRight className="w-3.5 h-3.5" />
               </button>

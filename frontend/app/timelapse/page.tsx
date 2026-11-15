@@ -123,7 +123,7 @@ function TimelapseInner() {
     }
     ctx.putImageData(new ImageData(rgba as unknown as Uint8ClampedArray<ArrayBuffer>, size, size), 0, 0);
     // centre crosshair ticks (target position at the epoch the catalogue gives)
-    ctx.strokeStyle = 'rgba(0,229,255,0.8)';
+    ctx.strokeStyle = 'rgba(212,175,55,0.8)';
     ctx.lineWidth = 1;
     const m = size / 2;
     const t = Math.max(3, size / 24);
@@ -235,17 +235,17 @@ function TimelapseInner() {
 
   const f = frames[idx];
   const span = useMemo(() => (frames.length > 1 ? frames[frames.length - 1].epoch_mjd - frames[0].epoch_mjd : 0), [frames]);
-  const field = 'bg-[rgba(0,0,0,0.5)] border border-[var(--border-subtle)] rounded-lg px-3 py-1.5 text-sm font-mono outline-none focus:border-[var(--accent-cyan)]';
+  const field = 'bg-[rgba(0,0,0,0.5)] border border-[var(--border-subtle)] rounded-sm px-3 py-1.5 text-sm font-mono outline-none focus:border-[var(--accent-cyan)]';
 
   return (
-    <div className="min-h-screen bg-[#060810] text-[#F0F4FF] font-sans flex flex-col">
+    <div className="min-h-screen bg-[#0a0b0f] text-[#F3EEE0] font-sans flex flex-col">
       {!embed && (
-        <header className="px-6 py-3 border-b border-[var(--border-subtle)] flex items-center gap-3 sticky top-0 bg-[rgba(6,8,16,0.85)] backdrop-blur-md z-10">
+        <header className="px-6 py-3 border-b border-[var(--border-subtle)] flex items-center gap-3 sticky top-0 bg-[rgba(10,11,15,0.85)] backdrop-blur-md z-10">
           <Link href="/explore" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
             ← Explorer
           </Link>
           <Telescope className="w-5 h-5 text-[var(--accent-cyan)]" />
-          <h1 className="text-base font-bold tracking-tight">SPHEREx Time-lapse</h1>
+          <h1 className="st-serif text-2xl font-normal tracking-tight leading-none">SPHEREx Time-lapse</h1>
         </header>
       )}
 
@@ -278,7 +278,7 @@ function TimelapseInner() {
                   ))}
                 </select>
               </label>
-              <button type="submit" className="px-4 py-1.5 rounded-lg bg-[var(--accent-cyan)] text-[#060810] text-sm font-semibold hover:brightness-110">
+              <button type="submit" className="px-4 py-1.5 rounded-sm bg-[var(--accent-cyan)] text-[#0a0b0f] text-sm font-semibold hover:brightness-110">
                 Load
               </button>
             </form>
@@ -311,7 +311,7 @@ function TimelapseInner() {
         {query && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
             <div className="lg:col-span-8 glass-panel p-3 space-y-3">
-              <div className="relative aspect-square max-h-[600px] mx-auto bg-[#020408] rounded-xl overflow-hidden border border-[var(--border-subtle)]">
+              <div className="relative aspect-square max-h-[600px] mx-auto bg-[#020408] rounded-sm overflow-hidden border border-[var(--border-subtle)]">
                 <canvas ref={canvasRef} className="w-full h-full" style={{ imageRendering: 'pixelated' }} />
                 {(isFetching || (data && !ready)) && (
                   <div className="absolute inset-0 flex items-center justify-center gap-2 text-xs font-mono text-[var(--accent-cyan)] bg-[rgba(2,4,8,0.7)]">
@@ -324,7 +324,7 @@ function TimelapseInner() {
                   </div>
                 )}
                 {f && (
-                  <div className="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-mono border border-[var(--accent-cyan)] bg-[rgba(0,229,255,0.15)] text-[var(--accent-cyan)]">
+                  <div className="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-mono border border-[var(--accent-cyan)] bg-[rgba(212,175,55,0.15)] text-[var(--accent-cyan)]">
                     {f.obs_date || `MJD ${f.epoch_mjd.toFixed(1)}`} · {idx + 1}/{frames.length}
                   </div>
                 )}
@@ -350,7 +350,7 @@ function TimelapseInner() {
                   <button
                     key={m.id}
                     onClick={() => setMode(m.id)}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold ${mode === m.id ? 'bg-[var(--accent-cyan)] text-[#060810]' : 'text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.06)]'}`}
+                    className={`px-3 py-1 rounded-sm text-xs font-semibold ${mode === m.id ? 'bg-[var(--accent-cyan)] text-[#0a0b0f]' : 'text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.06)]'}`}
                   >
                     {m.label}
                   </button>
@@ -361,7 +361,7 @@ function TimelapseInner() {
                   </span>
                 )}
                 {!embed && (
-                  <button onClick={copyLink} className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-cyan)]">
+                  <button onClick={copyLink} className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-sm text-xs border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-cyan)]">
                     {copied ? <Check className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />} {copied ? 'Copied' : 'Copy link'}
                   </button>
                 )}
@@ -371,7 +371,7 @@ function TimelapseInner() {
             {!embed && (
               <aside className="lg:col-span-4 glass-panel p-4 space-y-3 text-xs font-mono">
                 {data && (
-                  <div className={`flex items-start gap-2 p-2 rounded-lg border ${data.source === 'synthetic' ? 'border-[rgba(255,107,53,0.4)] bg-[rgba(255,107,53,0.08)] text-[var(--accent-orange)]' : 'border-[rgba(6,214,160,0.4)] bg-[rgba(6,214,160,0.08)] text-[var(--accent-green)]'}`}>
+                  <div className={`flex items-start gap-2 p-2 rounded-sm border ${data.source === 'synthetic' ? 'border-[rgba(200,121,58,0.4)] bg-[rgba(200,121,58,0.08)] text-[var(--accent-orange)]' : 'border-[rgba(143,188,143,0.4)] bg-[rgba(143,188,143,0.08)] text-[var(--accent-green)]'}`}>
                     {data.source === 'synthetic' && <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />}
                     <div>
                       <div className="font-bold">{data.source === 'synthetic' ? 'SYNTHETIC DEMO DATA' : `IRSA · ${data.collection}`}</div>
@@ -409,7 +409,7 @@ function TimelapseInner() {
 
 export default function TimelapsePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#060810]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#0a0b0f]" />}>
       <TimelapseInner />
     </Suspense>
   );

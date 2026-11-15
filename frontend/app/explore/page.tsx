@@ -27,14 +27,14 @@ export default function ExplorePage() {
     }
   }, []);
   const [activeTab, setActiveTab] = useState<'cards' | 'timeline'>('cards');
-  const { ra, dec, radius, selectedBand } = useSkyStore();
+  const { ra, dec, fov, selectedBand } = useSkyStore();
 
-  const { data: observations = [] } = useObservations(ra, dec, radius, selectedBand);
+  const { data: observations = [] } = useObservations(ra, dec, fov, selectedBand);
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-[#060810] text-[#F0F4FF]">
+    <div className="relative w-screen h-screen overflow-hidden bg-[#0a0b0f] text-[#F3EEE0]">
       {/* 1. Global Navigation Bar */}
-      <header className="absolute top-0 left-0 right-0 z-30 px-6 py-3 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[rgba(6,8,16,0.7)] backdrop-blur-md">
+      <header className="absolute top-0 left-0 right-0 z-30 px-6 py-3 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[rgba(10,11,15,0.7)] backdrop-blur-md">
         <div className="flex items-center gap-4">
           <Link
             href="/"
@@ -46,7 +46,7 @@ export default function ExplorePage() {
           <div className="h-4 w-[1px] bg-[var(--border-subtle)]" />
           <div className="flex items-center gap-2">
             <Telescope className="w-5 h-5 text-[var(--accent-cyan)]" />
-            <h1 className="text-base font-bold tracking-tight bg-gradient-to-r from-white to-[var(--accent-cyan)] bg-clip-text text-transparent">
+            <h1 className="st-serif text-2xl font-normal tracking-tight leading-none bg-gradient-to-r from-white to-[var(--accent-cyan)] bg-clip-text text-transparent">
               SkyTrace Celestial Explorer
             </h1>
           </div>
@@ -54,7 +54,7 @@ export default function ExplorePage() {
 
         {/* Live Data Status Indicator */}
         <div className="flex items-center gap-3">
-          <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[rgba(0,229,255,0.08)] border border-[rgba(0,229,255,0.25)] text-xs text-[var(--accent-cyan)] font-mono">
+          <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[rgba(212,175,55,0.08)] border border-[rgba(212,175,55,0.25)] text-xs text-[var(--accent-cyan)] font-mono">
             <span className="w-2 h-2 rounded-full bg-[var(--accent-cyan)] animate-pulse" />
             NASA IRSA SPHEREx QR3 Live Archive
           </div>
@@ -64,9 +64,9 @@ export default function ExplorePage() {
               if (!showPlanetX) setDrawerExpanded(false);
               setShowPlanetX((v) => !v);
             }}
-            className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-sm border text-xs font-semibold transition-all ${
               showPlanetX
-                ? 'bg-[#ff3df2] text-[#060810] border-transparent'
+                ? 'bg-[#ff3df2] text-[#0a0b0f] border-transparent'
                 : 'bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] border-[var(--border-subtle)] text-[var(--text-primary)]'
             }`}
           >
@@ -74,7 +74,7 @@ export default function ExplorePage() {
           </button>
           <Link
             href="/compare"
-            className="px-3 py-1.5 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-primary)] transition-all flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-sm bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-primary)] transition-all flex items-center gap-1.5"
           >
             <Layers className="w-3.5 h-3.5 text-[var(--accent-orange)]" />
             Blink Comparator
@@ -99,8 +99,8 @@ export default function ExplorePage() {
             onClick={() => set(!on)}
             className={`px-3 py-1 rounded-full text-[11px] font-mono border backdrop-blur-md transition-all ${
               on
-                ? 'bg-[var(--accent-cyan)] text-[#060810] border-transparent font-bold'
-                : 'bg-[rgba(13,18,32,0.85)] text-[var(--text-secondary)] border-[var(--border-subtle)]'
+                ? 'bg-[var(--accent-cyan)] text-[#0a0b0f] border-transparent font-bold'
+                : 'bg-[rgba(18,19,24,0.85)] text-[var(--text-secondary)] border-[var(--border-subtle)]'
             }`}
           >
             {label}
@@ -123,12 +123,12 @@ export default function ExplorePage() {
           {/* Collapse/Expand Toggle & View Switcher */}
           <div className="self-end pointer-events-auto flex items-center gap-2">
             {drawerExpanded && (
-              <div className="flex items-center bg-[rgba(13,18,32,0.85)] border border-[var(--border-subtle)] rounded-lg p-0.5 text-[11px] font-mono">
+              <div className="flex items-center bg-[rgba(18,19,24,0.85)] border border-[var(--border-subtle)] rounded-sm p-0.5 text-[11px] font-mono">
                 <button
                   onClick={() => setActiveTab('cards')}
                   className={`px-2 py-0.5 rounded transition-all ${
                     activeTab === 'cards'
-                      ? 'bg-[var(--accent-cyan)] text-[#060810] font-bold'
+                      ? 'bg-[var(--accent-cyan)] text-[#0a0b0f] font-bold'
                       : 'text-[var(--text-secondary)] hover:text-white'
                   }`}
                 >
@@ -138,7 +138,7 @@ export default function ExplorePage() {
                   onClick={() => setActiveTab('timeline')}
                   className={`px-2 py-0.5 rounded transition-all flex items-center gap-1 ${
                     activeTab === 'timeline'
-                      ? 'bg-[var(--accent-cyan)] text-[#060810] font-bold'
+                      ? 'bg-[var(--accent-cyan)] text-[#0a0b0f] font-bold'
                       : 'text-[var(--text-secondary)] hover:text-white'
                   }`}
                 >
@@ -150,7 +150,7 @@ export default function ExplorePage() {
 
             <button
               onClick={() => setDrawerExpanded(!drawerExpanded)}
-              className="px-3 py-1 rounded-t-lg bg-[rgba(13,18,32,0.85)] border border-[var(--border-subtle)] border-b-0 text-xs font-mono text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1 backdrop-blur-md"
+              className="px-3 py-1 rounded-t-lg bg-[rgba(18,19,24,0.85)] border border-[var(--border-subtle)] border-b-0 text-xs font-mono text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1 backdrop-blur-md"
             >
               {drawerExpanded ? (
                 <>

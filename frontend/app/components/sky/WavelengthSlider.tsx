@@ -47,7 +47,7 @@ export default function WavelengthSlider() {
       </div>
 
       {/* Primary Display */}
-      <div className="flex items-baseline justify-between mb-3 bg-[rgba(0,0,0,0.3)] p-2.5 rounded-lg border border-[var(--border-subtle)]">
+      <div className="flex items-baseline justify-between mb-3 bg-[rgba(0,0,0,0.3)] p-2.5 rounded-sm border border-[var(--border-subtle)]">
         <div>
           <span className="text-xs font-mono text-[var(--text-secondary)]">Band</span>
           <span className="text-xl font-mono font-bold text-[var(--text-primary)] ml-1.5">
@@ -76,7 +76,7 @@ export default function WavelengthSlider() {
           className="h-2.5 w-full rounded-full"
           style={{
             background:
-              'linear-gradient(to right, #8A2BE2 0%, #00E5FF 20%, #FFD166 45%, #FF6B35 70%, #EF476F 100%)',
+              'linear-gradient(to right, #8A2BE2 0%, #D4AF37 20%, #E6C65C 45%, #C8793A 70%, #E0715F 100%)',
           }}
         />
         <input
@@ -111,7 +111,7 @@ export default function WavelengthSlider() {
               title={anchor.desc}
               className={`px-1.5 py-1 rounded text-center transition-all ${
                 selectedBand === anchor.band
-                  ? 'bg-[var(--accent-orange)] text-[#060810] font-bold shadow-[0_0_10px_rgba(255,107,53,0.5)]'
+                  ? 'bg-[var(--accent-orange)] text-[#0a0b0f] font-bold shadow-[0_0_10px_rgba(200,121,58,0.5)]'
                   : 'bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.1)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
               }`}
             >

@@ -122,12 +122,12 @@ export default function ControlToggles() {
         <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)] mb-1.5 px-1">
           Observation Mode
         </div>
-        <div className="grid grid-cols-2 gap-1 p-0.5 rounded-lg bg-[rgba(6,8,16,0.6)] border border-[var(--border-subtle)]">
+        <div className="grid grid-cols-2 gap-1 p-0.5 rounded-sm bg-[rgba(10,11,15,0.6)] border border-[var(--border-subtle)]">
           <button
             onClick={() => setViewMode('sky')}
             className={`py-1 px-2 rounded-md text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all ${
               viewMode === 'sky'
-                ? 'bg-[var(--accent-cyan)] text-[#060810] font-bold shadow-[0_0_12px_rgba(0,229,255,0.4)]'
+                ? 'bg-[var(--accent-cyan)] text-[#0a0b0f] font-bold shadow-[0_0_12px_rgba(212,175,55,0.4)]'
                 : 'text-[var(--text-secondary)] hover:text-white'
             }`}
           >
@@ -138,7 +138,7 @@ export default function ControlToggles() {
             onClick={() => setViewMode('spacecraft')}
             className={`py-1 px-2 rounded-md text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all ${
               viewMode === 'spacecraft'
-                ? 'bg-[var(--accent-cyan)] text-[#060810] font-bold shadow-[0_0_12px_rgba(0,229,255,0.4)]'
+                ? 'bg-[var(--accent-cyan)] text-[#0a0b0f] font-bold shadow-[0_0_12px_rgba(212,175,55,0.4)]'
                 : 'text-[var(--text-secondary)] hover:text-white'
             }`}
           >

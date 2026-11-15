@@ -74,7 +74,7 @@ export default function SEDChart({
       label: `Candidate Measured SED`,
       data: measuredFluxes,
       borderColor: '#FFFFFF',
-      backgroundColor: '#00E5FF',
+      backgroundColor: '#D4AF37',
       pointRadius: (ctx: any) => {
         const index = ctx.dataIndex;
         return index + 1 === selectedBand ? 7 : 3.5;
@@ -130,9 +130,9 @@ export default function SEDChart({
           display: false,
         },
         tooltip: {
-          backgroundColor: 'rgba(6, 8, 16, 0.95)',
-          titleColor: '#00E5FF',
-          bodyColor: '#F0F4FF',
+          backgroundColor: 'rgba(10,11,15, 0.95)',
+          titleColor: '#D4AF37',
+          bodyColor: '#F3EEE0',
           borderColor: 'rgba(255, 255, 255, 0.15)',
           borderWidth: 1,
           padding: 10,
@@ -157,14 +157,14 @@ export default function SEDChart({
           title: {
             display: true,
             text: 'Wavelength λ (µm) — 102 SPHEREx Channels',
-            color: '#8892B0',
+            color: '#9A9DA8',
             font: { family: 'Inter', size: 11, weight: 500 },
           },
           grid: {
             color: 'rgba(255, 255, 255, 0.05)',
           },
           ticks: {
-            color: '#8892B0',
+            color: '#9A9DA8',
             font: { family: 'JetBrains Mono', size: 10 },
             maxTicksLimit: 14,
           },
@@ -173,14 +173,14 @@ export default function SEDChart({
           title: {
             display: true,
             text: 'Flux Density F_λ (mJy)',
-            color: '#8892B0',
+            color: '#9A9DA8',
             font: { family: 'Inter', size: 11, weight: 500 },
           },
           grid: {
             color: 'rgba(255, 255, 255, 0.06)',
           },
           ticks: {
-            color: '#8892B0',
+            color: '#9A9DA8',
             font: { family: 'JetBrains Mono', size: 10 },
           },
         },
@@ -214,7 +214,7 @@ export default function SEDChart({
             Spectral Energy Distribution (SED)
           </span>
           {candidateId && (
-            <span className="text-xs px-2 py-0.5 rounded bg-[rgba(0,229,255,0.1)] text-[var(--accent-cyan)] font-mono">
+            <span className="text-xs px-2 py-0.5 rounded bg-[rgba(212,175,55,0.1)] text-[var(--accent-cyan)] font-mono">
               {candidateId}
             </span>
           )}
@@ -231,7 +231,7 @@ export default function SEDChart({
 
         {/* Best-Fit Diagnostic Badge */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgba(6,214,160,0.15)] border border-[var(--accent-green)] text-xs text-[var(--accent-green)] font-mono">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgba(143,188,143,0.15)] border border-[var(--accent-green)] text-xs text-[var(--accent-green)] font-mono">
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>Best Fit: {fitResult.bestTemplate.classificationBadge}</span>
           </div>
@@ -242,7 +242,7 @@ export default function SEDChart({
       </div>
 
       {/* Chart Canvas Area */}
-      <div className="relative w-full h-64 bg-[rgba(2,4,8,0.7)] rounded-xl border border-[var(--border-subtle)] p-2">
+      <div className="relative w-full h-64 bg-[rgba(2,4,8,0.7)] rounded-sm border border-[var(--border-subtle)] p-2">
         <canvas ref={chartCanvasRef} />
       </div>
 
@@ -277,7 +277,7 @@ export default function SEDChart({
                 />
                 <span>{tmpl.name.split(' (')[0]}</span>
                 {isBest && (
-                  <span className="text-[9px] px-1 py-0.2 rounded bg-[rgba(6,214,160,0.2)] text-[var(--accent-green)]">
+                  <span className="text-[9px] px-1 py-0.2 rounded bg-[rgba(143,188,143,0.2)] text-[var(--accent-green)]">
                     BEST
                   </span>
                 )}
