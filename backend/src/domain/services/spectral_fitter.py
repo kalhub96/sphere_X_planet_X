@@ -1,10 +1,11 @@
+from ..spherex_bands import band_center_um
 """Spectral template fitting across 102 SPHEREx spectroscopic bands."""
 import math
 import numpy as np
 from ..entities.sed import SpectralPoint, SpectralEnergyDistribution
 
 class SpectralTemplateFitter:
-    WAVELENGTHS = [0.75 * ((5.0 / 0.75) ** (i / 101.0)) for i in range(102)]
+    WAVELENGTHS = [band_center_um(i) for i in range(102)]
 
     @classmethod
     def _generate_template(cls, template_name: str) -> np.ndarray:

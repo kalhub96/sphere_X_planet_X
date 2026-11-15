@@ -1,7 +1,6 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
+cat > .gitignore <<'EOF'
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -12,58 +11,44 @@
 
 # testing
 /coverage
+.pytest_cache/
 
 # next.js
-/.next/
+.next/
 /out/
-
-# production
 /build
+next-env.d.ts
+*.tsbuildinfo
 
-# misc
-.DS_Store
-*.pem
+# env files
+.env*
+!.env.example
 
-# debug
+# logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# python
+__pycache__/
+*.py[cod]
+.venv/
+backend/.venv/
+
+# os / ide
+.DS_Store
+*.pem
+.idea/
+.vscode/
 
 # vercel
 .vercel
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.venv/
-backend/.venv/
-.pytest_cache/
-
-# IDEs
-.idea/
-.vscode/
-
-# Build caches
-.next/
-backend/.venv
-__pycache__/
-*.pyc
-.venv/
-__pycache__/
-*.pyc
-.venv/
-__pycache__/
-*.py[cod]
-.env
-node_modules/
-.next/
+# one-off helper scripts
+/fix_calcs.py
+/gold_theme.py
+/resolve_merge.sh
+/merged_main.py
+/merged_config.py
+EOF

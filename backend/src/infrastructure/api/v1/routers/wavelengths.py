@@ -1,3 +1,4 @@
+from .....domain.spherex_bands import band_center_um
 from fastapi import APIRouter
 from ..schemas import WavelengthBandResponse
 
@@ -7,7 +8,7 @@ router = APIRouter(prefix="/api/v1/wavelengths", tags=["wavelengths"])
 async def list_wavelengths():
     bands = []
     for i in range(102):
-        w = 0.75 * ((5.0 / 0.75) ** (i / 101.0))
+        w = band_center_um(i)
         # 6 HgCdTe detector array mapping (17 channels each)
         det_idx = min(i // 17 + 1, 6)
         detector = f"D{det_idx}"

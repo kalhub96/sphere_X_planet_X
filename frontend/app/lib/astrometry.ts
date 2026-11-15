@@ -123,8 +123,17 @@ export function formatDec(decDeg: number): string {
  * lambda_i = 0.75 * (5.0 / 0.75)^((i - 1) / 101)  for i in [1..102]
  */
 export function getSPHERExWavelength(bandIndex: number): number {
-  const clamped = Math.max(1, Math.min(102, Math.round(bandIndex)));
-  return 0.75 * Math.pow(5.0 / 0.75, (clamped - 1) / 101);
+  // 6 detector arrays x 17 channels. Channel edges are log-spaced inside each array
+  // (Spectral response of SPHEREx, arXiv:2602.09139, Table 1 and Eqs. 1-2).
+  const EDGES = [0.75, 1.11, 1.64, 2.42, 3.82, 4.42, 5.0];
+  const i = Math.max(1, Math.min(102, Math.round(bandIndex))) - 1;
+  const a = Math.floor(i / 17);
+  const c = i % 17;
+  const lo = EDGES[a];
+  const hi = EDGES[a + 1];
+  const r = hi / lo;
+  // geometric centre of the channel
+  return lo * Math.pow(r, (c + 0.5) / 17);
 }
 
 /**
@@ -609,7 +618,7 @@ export function parseDec(input: string): number | null {
 
   // 1. Check for dms format: e.g. 7d14m42.53s or 7° 14' 42.53"
   if (/[°d'm"s]/i.test(body)) {
-    const dmsRegex = /^(\d+(?:\.\d+)?)\s*(?:[°d]|deg)?(?:\s*(\\d+(?:\.\d+)?)\s*(?:['m]|min)?)?(?:\\s*(\\d+(?:\\.\d+)?)\\s*(?:[\"s]|sec)?)?$/i;
+        const dmsRegex = /^(\d+(?:\.\d+)?)\s*(?:°|d|deg)?(?:\s*(\d+(?:\.\d+)?)\s*(?:['′]|m|min)?)?(?:\s*(\d+(?:\.\d+)?)\s*(?:["″]|s|sec)?)?$/i;
     const dmsMatch = body.match(dmsRegex);
     if (dmsMatch) {
       const deg = parseFloat(dmsMatch[1]) || 0;

@@ -13,13 +13,14 @@ from sqlalchemy import select
 
 from ...domain.entities.observation import Observation, is_simulated_obs_id
 from ...domain.exceptions import IRSAError
+from ...domain.spherex_bands import band_center_um
 from ..db.models import ObservationModel
 from ..db.session import create_tables, get_session_factory
 
 logger = logging.getLogger(__name__)
 
 SPHEREX_WAVELENGTHS: Final[list[float]] = [
-    round(0.75 * ((5.0 / 0.75) ** (i / 101.0)), 4) for i in range(102)
+    round(band_center_um(i), 4) for i in range(102)
 ]
 
 DETECTOR_ARRAY_BANDS: Final[dict[str, list[int]]] = {

@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from ...domain.entities.fits_image import FITSImage
 from ...domain.exceptions import NoDataError
+from ...domain.spherex_bands import band_center_um
 from ..db.models import ObservationModel
 from ..db.session import create_tables, get_session_factory
 from .astropy_fits_adapter import AstropyFITSAdapter
@@ -168,7 +169,7 @@ class IRSAIBEAdapter:
         elif abs(ra - 331.0438) < 0.05 and abs(dec - (-56.7828)) < 0.05:
             bx = 64.0 + (dt_years * 0.54)
             by = 64.0 - (dt_years * 0.54)
-            wl = 0.75 * ((5.0 / 0.75) ** (b_idx / 101.0))
+            wl = band_center_um(b_idx)
             is_methane_dip = (1.55 <= wl <= 1.70) or (2.20 <= wl <= 2.40)
             flux = 70.0 if is_methane_dip else 240.0
             self._render_gaussian_source(data, bx, by, flux, fwhm=2.4)
@@ -210,7 +211,7 @@ class IRSAIBEAdapter:
         data_masked = np.where(bad_mask, np.nan, data)
         clean_pct = 100.0 * float((~bad_mask).sum()) / max(bad_mask.size, 1)
 
-        wl = round(0.75 * ((5.0 / 0.75) ** (b_idx / 101.0)), 4)
+        wl = round(band_center_um(b_idx), 4)
         return FITSImage(
             data=data_masked,
             variance=variance,

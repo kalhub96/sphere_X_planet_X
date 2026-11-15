@@ -18,12 +18,12 @@ export const DETECTOR_ARRAYS: ReadonlyArray<{
   bandRange: string;
   wavelengthRange: string;
 }> = [
-  { id: 'D1', label: 'D1', bandRange: '1–17', wavelengthRange: '0.75–1.10 µm' },
-  { id: 'D2', label: 'D2', bandRange: '18–34', wavelengthRange: '1.10–1.63 µm' },
-  { id: 'D3', label: 'D3', bandRange: '35–51', wavelengthRange: '1.63–2.42 µm' },
-  { id: 'D4', label: 'D4', bandRange: '52–68', wavelengthRange: '2.42–3.58 µm' },
-  { id: 'D5', label: 'D5', bandRange: '69–85', wavelengthRange: '3.58–4.32 µm' },
-  { id: 'D6', label: 'D6', bandRange: '86–102', wavelengthRange: '4.32–5.00 µm' },
+  { id: 'D1', label: 'D1', bandRange: '1–17', wavelengthRange: '0.75–1.11 µm' },
+  { id: 'D2', label: 'D2', bandRange: '18–34', wavelengthRange: '1.11–1.64 µm' },
+  { id: 'D3', label: 'D3', bandRange: '35–51', wavelengthRange: '1.64–2.42 µm' },
+  { id: 'D4', label: 'D4', bandRange: '52–68', wavelengthRange: '2.42–3.82 µm' },
+  { id: 'D5', label: 'D5', bandRange: '69–85', wavelengthRange: '3.82–4.42 µm' },
+  { id: 'D6', label: 'D6', bandRange: '86–102', wavelengthRange: '4.42–5.00 µm' },
 ];
 
 export const BENCHMARK_PRESETS: readonly BenchmarkPreset[] = [
