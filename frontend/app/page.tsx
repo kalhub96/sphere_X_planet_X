@@ -367,6 +367,7 @@ function CoordForm() {
 
 /* ---------- page ---------- */
 export default function HomePage() {
+  const router = useRouter();
   const [active, setActive] = useState(0);
   const [auto, setAuto] = useState(true);
   const [navHidden, setNavHidden] = useState(false);
@@ -412,7 +413,12 @@ export default function HomePage() {
         />
 
         <motion.div style={{ scale: bgScale }} className="fixed inset-0 z-0 pointer-events-auto opacity-70">
-          <CelestialSphere className="w-full h-full" />
+          <CelestialSphere
+            className="w-full h-full"
+            onCoordinateClick={(clickedRa, clickedDec) => {
+              router.push(blinkUrl(clickedRa, clickedDec, 300));
+            }}
+          />
         </motion.div>
         <div className="fixed inset-0 z-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(10,11,15,0.2)_0%,rgba(10,11,15,0.7)_65%,#0a0b0f_100%)]" />
         <CursorGlow />

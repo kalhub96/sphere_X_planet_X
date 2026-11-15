@@ -30,7 +30,11 @@ import {
   Box,
 } from 'lucide-react';
 
-export default function SkyHUD() {
+interface SkyHUDProps {
+  onOpenBlinkViewer?: () => void;
+}
+
+export default function SkyHUD({ onOpenBlinkViewer }: SkyHUDProps = {}) {
   const {
     ra,
     dec,
@@ -214,6 +218,18 @@ export default function SkyHUD() {
             </div>
           </div>
         </div>
+
+        {/* 1-Click Interactive Blink Viewer Inspector */}
+        {onOpenBlinkViewer && (
+          <button
+            type="button"
+            onClick={onOpenBlinkViewer}
+            className="w-full mb-3 py-2 px-3 rounded-sm bg-[var(--st-gold)] text-[#0a0b0f] text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-2 hover:shadow-[0_0_16px_rgba(212,175,55,0.45)] transition-all"
+          >
+            <Layers className="w-4 h-4 text-[#0a0b0f]" />
+            <span>[02] Inspect in Blink Viewer</span>
+          </button>
+        )}
 
         {/* Manual Slew Input */}
         <form onSubmit={handleManualSlew} className="flex gap-2">

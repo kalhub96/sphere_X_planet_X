@@ -9,6 +9,7 @@ import ObservationsDrawer from '../components/sky/ObservationsDrawer';
 import ObservationTimeline from '../components/sky/ObservationTimeline';
 import ControlToggles from '../components/sky/ControlToggles';
 import PlanetXPanel from '../components/sky/PlanetXPanel';
+import BlinkInspectorModal from '../components/sky/BlinkInspectorModal';
 import { useSkyStore } from '../store/skyStore';
 import { useObservations } from '../hooks/useObservations';
 import { Telescope, ArrowLeft, Layers, ChevronUp, ChevronDown, Clock } from 'lucide-react';
@@ -19,6 +20,7 @@ export default function ExplorePage() {
   const [showTarget, setShowTarget] = useState<boolean>(false);
   const [showLayers, setShowLayers] = useState<boolean>(false);
   const [showPlanetX, setShowPlanetX] = useState<boolean>(false);
+  const [showBlinkModal, setShowBlinkModal] = useState<boolean>(false);
   useEffect(() => {
     if (window.innerWidth >= 1024) {
       setDrawerExpanded(true);
@@ -72,19 +74,31 @@ export default function ExplorePage() {
           >
             Planet X
           </button>
+          <button
+            onClick={() => setShowBlinkModal(true)}
+            className="px-3 py-1.5 rounded-sm bg-[rgba(212,175,55,0.15)] hover:bg-[rgba(212,175,55,0.25)] border border-[rgba(212,175,55,0.35)] text-xs font-semibold text-[var(--st-gold)] transition-all flex items-center gap-1.5"
+            title="Open Blink Viewer for the selected celestial coordinate"
+          >
+            <Layers className="w-3.5 h-3.5 text-[var(--accent-orange)]" />
+            <span>Blink Viewer</span>
+          </button>
           <Link
             href="/compare"
             className="px-3 py-1.5 rounded-sm bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--text-primary)] transition-all flex items-center gap-1.5"
           >
-            <Layers className="w-3.5 h-3.5 text-[var(--accent-orange)]" />
-            <span><span className="hidden sm:inline">Blink </span>Comparator</span>
+            <span><span className="hidden sm:inline">Compare </span>Studio</span>
           </Link>
         </div>
       </header>
 
       {/* 2. Three.js Full-Viewport Celestial Sphere */}
       <main className="absolute inset-0 z-0">
-        <CelestialSphere className="w-full h-full" />
+        <CelestialSphere
+          className="w-full h-full"
+          onCoordinateClick={(clickedRa, clickedDec, clickedName) => {
+            setShowBlinkModal(true);
+          }}
+        />
       </main>
 
       {/* Panel switches (small screens) */}
@@ -109,7 +123,7 @@ export default function ExplorePage() {
       </div>
 
       {/* 3. Left-side Target HUD Overlay */}
-      {showTarget && <SkyHUD />}
+      {showTarget && <SkyHUD onOpenBlinkViewer={() => setShowBlinkModal(true)} />}
 
       {/* 4. Right-side Layer Toggles */}
       {showLayers && <ControlToggles />}
@@ -174,7 +188,7 @@ export default function ExplorePage() {
               {/* Right Column: Multi-Epoch Passes or Cadence Timeline (7 cols) */}
               <div className="2xl:col-span-7">
                 {activeTab === 'cards' ? (
-                  <ObservationsDrawer />
+                  <ObservationsDrawer onOpenBlinkViewer={() => setShowBlinkModal(true)} />
                 ) : (
                   <ObservationTimeline observations={observations} />
                 )}
@@ -183,6 +197,9 @@ export default function ExplorePage() {
           )}
         </div>
       </div>
+
+      {/* Interactive Blink Viewer Modal Inspector */}
+      <BlinkInspectorModal isOpen={showBlinkModal} onClose={() => setShowBlinkModal(false)} />
     </div>
   );
 }

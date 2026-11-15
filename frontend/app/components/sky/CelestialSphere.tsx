@@ -21,7 +21,7 @@ import {
 import { eclipticToOrrery } from '../../lib/planetXScale';
 
 interface CelestialSphereProps {
-  onCoordinateClick?: (ra: number, dec: number) => void;
+  onCoordinateClick?: (ra: number, dec: number, name?: string) => void;
   className?: string;
 }
 
@@ -2001,7 +2001,7 @@ export default function CelestialSphere({ onCoordinateClick, className }: Celest
       // 1. Check Planet Click (slew to hovered planet)
       if (currentHoveredPlanet) {
         setCoordinates(currentHoveredPlanet.ra, currentHoveredPlanet.dec, currentHoveredPlanet.name);
-        if (onCoordinateClick) onCoordinateClick(currentHoveredPlanet.ra, currentHoveredPlanet.dec);
+        if (onCoordinateClick) onCoordinateClick(currentHoveredPlanet.ra, currentHoveredPlanet.dec, currentHoveredPlanet.name);
         return;
       }
 
@@ -2012,8 +2012,9 @@ export default function CelestialSphere({ onCoordinateClick, className }: Celest
       if (candHits.length > 0) {
         const hit = candidateMeshes.find((c) => c.mesh === candHits[0].object);
         if (hit) {
-          setCoordinates(hit.data.ra, hit.data.dec, `${hit.data.type} (${hit.data.id})`);
-          if (onCoordinateClick) onCoordinateClick(hit.data.ra, hit.data.dec);
+          const name = `${hit.data.type} (${hit.data.id})`;
+          setCoordinates(hit.data.ra, hit.data.dec, name);
+          if (onCoordinateClick) onCoordinateClick(hit.data.ra, hit.data.dec, name);
           return;
         }
       }
@@ -2025,7 +2026,7 @@ export default function CelestialSphere({ onCoordinateClick, className }: Celest
         if (idx < BRIGHT_STARS.length) {
           const s = BRIGHT_STARS[idx];
           setCoordinates(s.ra, s.dec, s.name);
-          if (onCoordinateClick) onCoordinateClick(s.ra, s.dec);
+          if (onCoordinateClick) onCoordinateClick(s.ra, s.dec, s.name);
           return;
         }
       }
@@ -2035,8 +2036,9 @@ export default function CelestialSphere({ onCoordinateClick, className }: Celest
       if (sphereHits.length > 0) {
         const pt = sphereHits[0].point;
         const icrs = vectorToIcrs(pt);
-        setCoordinates(icrs.ra, icrs.dec);
-        if (onCoordinateClick) onCoordinateClick(icrs.ra, icrs.dec);
+        const name = `Target (RA ${icrs.ra.toFixed(2)}°, Dec ${icrs.dec.toFixed(2)}°)`;
+        setCoordinates(icrs.ra, icrs.dec, name);
+        if (onCoordinateClick) onCoordinateClick(icrs.ra, icrs.dec, name);
       }
     };
 

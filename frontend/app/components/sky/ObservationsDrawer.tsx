@@ -6,7 +6,11 @@ import * as Icons from 'lucide-react';
 import { useSkyStore } from '../../store/skyStore';
 import { useObservations } from '../../hooks/useObservations';
 
-export default function ObservationsDrawer() {
+interface ObservationsDrawerProps {
+  onOpenBlinkViewer?: () => void;
+}
+
+export default function ObservationsDrawer({ onOpenBlinkViewer }: ObservationsDrawerProps = {}) {
   const {
     ra,
     dec,
@@ -126,38 +130,44 @@ export default function ObservationsDrawer() {
             })}
           </div>
 
-          {/* Launch Comparison CTA */}
-          <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between">
-            <div className="text-[11px] font-mono text-[var(--text-secondary)]">
-              {selectedObsA && selectedObsB ? (
-                <span className="text-[var(--accent-green)] flex items-center gap-1">
-                  <Icons.Sparkles className="w-3.5 h-3.5" /> Epochs aligned & ready for diffing
-                </span>
-              ) : (
-                <span className="text-[var(--text-muted)]">
-                  Pick Epoch A & Epoch B to run difference imaging
-                </span>
-              )}
-            </div>
+            {/* Launch Comparison CTA */}
+            <div className="pt-2 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-2">
+              <div className="text-[11px] font-mono text-[var(--text-secondary)]">
+                {selectedObsA && selectedObsB ? (
+                  <span className="text-[var(--accent-green)] flex items-center gap-1">
+                    <Icons.Sparkles className="w-3.5 h-3.5" /> Epochs aligned & ready for diffing
+                  </span>
+                ) : (
+                  <span className="text-[var(--text-muted)]">
+                    Pick Epoch A & Epoch B or launch multi-epoch video flipbook
+                  </span>
+                )}
+              </div>
 
-            {selectedObsA && selectedObsB ? (
-              <Link
-                href={`/compare?obs_a=${encodeURIComponent(selectedObsA.id)}&obs_b=${encodeURIComponent(
-                  selectedObsB.id
-                )}&band=${selectedBand}`}
-                className="bg-[var(--accent-cyan)] hover:bg-[var(--accent-cyan)] hover:shadow-[0_0_16px_rgba(212,175,55,0.5)] text-[#0a0b0f] px-4 py-2 rounded-sm text-xs font-bold transition-all flex items-center gap-1.5"
-              >
-                Launch Blink Comparator <Icons.ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            ) : (
-              <button
-                disabled
-                className="bg-[rgba(255,255,255,0.05)] text-[var(--text-muted)] px-4 py-2 rounded-sm text-xs font-medium cursor-not-allowed flex items-center gap-1.5"
-              >
-                Select 2 Epochs <Icons.ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+              <div className="flex items-center gap-2">
+                {onOpenBlinkViewer && (
+                  <button
+                    type="button"
+                    onClick={onOpenBlinkViewer}
+                    className="bg-[var(--st-gold)] hover:shadow-[0_0_16px_rgba(212,175,55,0.45)] text-[#0a0b0f] px-3.5 py-1.5 rounded-sm text-xs font-bold transition-all flex items-center gap-1.5"
+                  >
+                    <Icons.Play className="w-3.5 h-3.5 fill-current" />
+                    <span>Flipbook Video Loop</span>
+                  </button>
+                )}
+
+                {selectedObsA && selectedObsB ? (
+                  <Link
+                    href={`/compare?obs_a=${encodeURIComponent(selectedObsA.id)}&obs_b=${encodeURIComponent(
+                      selectedObsB.id
+                    )}&band=${selectedBand}`}
+                    className="bg-[var(--accent-cyan)] hover:bg-[var(--accent-cyan)] hover:shadow-[0_0_16px_rgba(212,175,55,0.5)] text-[#0a0b0f] px-3.5 py-1.5 rounded-sm text-xs font-bold transition-all flex items-center gap-1.5"
+                  >
+                    Launch Comparator <Icons.ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                ) : null}
+              </div>
+            </div>
         </div>
       )}
     </div>
