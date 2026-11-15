@@ -8,6 +8,7 @@ export interface Observation {
   wavelength_um: number;
   obs_date: string;
   epoch_mjd: number;
+  exposure_s?: number;
   quality_pct: number;
   fits_url: string;
   /** True when the record came from the backend's offline demo fallback, not IRSA. */
@@ -43,6 +44,7 @@ export interface FlagSummary {
 export interface EpochFrame {
   epoch_index: number;
   epoch_mjd: number;
+  exposure_s?: number;
   obs_date: string;
   image_b64: string;
   wcs: WCSHeader;

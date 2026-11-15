@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     irsa_ibe_url: str = "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1"
     irsa_most_url: str = "https://irsa.ipac.caltech.edu/cgi-bin/MOST/nph-most"
     spherex_collections: list[str] = ["spherex_dr1", "spherex_qr3"]
+    # Time-lapse endpoint: SIA service + SPHEREx collection (change the collection to pick up new data releases)
+    irsa_timelapse_sia_url: str = "https://irsa.ipac.caltech.edu/SIA"
+    irsa_spherex_collection: str = "spherex_qr3"
+    allow_synthetic_fallback: bool = True
     log_level: str = "INFO"
     # Real archive requests can be slow; give IRSA time instead of giving up
     # (the app never substitutes invented data for a slow answer).

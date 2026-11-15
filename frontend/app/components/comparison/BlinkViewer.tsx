@@ -227,7 +227,7 @@ export default function BlinkViewer({
       context.clip();
       if (last) context.drawImage(last, 0, 0, width, height);
       context.restore();
-      context.strokeStyle = '#00e5ff';
+      context.strokeStyle = '#D4AF37';
       context.lineWidth = 2 / zoom;
       context.beginPath();
       context.moveTo(splitX, 0);
@@ -245,10 +245,10 @@ export default function BlinkViewer({
       const radius = (selected ? 13 : 9) / zoom;
       context.beginPath();
       context.arc(px, py, radius, 0, Math.PI * 2);
-      context.strokeStyle = selected ? '#00e5ff' : '#ffd166';
+      context.strokeStyle = selected ? '#D4AF37' : '#E6C65C';
       context.lineWidth = 2 / zoom;
       context.stroke();
-      context.fillStyle = '#f0f4ff';
+      context.fillStyle = '#F3EEE0';
       context.font = `${10 / zoom}px monospace`;
       context.fillText(`${candidate.snr_change >= 0 ? '+' : ''}${candidate.snr_change.toFixed(1)}σ`, px + radius + 3, py);
     });
@@ -320,12 +320,12 @@ export default function BlinkViewer({
   return (
     <section className="glass-panel flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] pb-3">
-        <div className="flex flex-wrap gap-1 rounded-xl border border-[var(--border-subtle)] bg-black/30 p-1">
+        <div className="flex flex-wrap gap-1 rounded-sm border border-[var(--border-subtle)] bg-black/30 p-1">
           {modeOptions.map((option) => (
             <button
               key={option.id}
               onClick={() => changeMode(option.id)}
-              className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${viewMode === option.id ? 'bg-[var(--accent-cyan)] text-[#060810]' : 'text-[var(--text-secondary)] hover:bg-white/5 hover:text-white'}`}
+              className={`rounded-sm px-2.5 py-1.5 text-xs font-semibold ${viewMode === option.id ? 'bg-[var(--accent-cyan)] text-[#0a0b0f]' : 'text-[var(--text-secondary)] hover:bg-white/5 hover:text-white'}`}
             >
               {option.label}
             </button>
@@ -343,7 +343,7 @@ export default function BlinkViewer({
         )}
       </div>
 
-      <div className="relative aspect-square max-h-[600px] overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[#020408]">
+      <div className="relative aspect-square max-h-[600px] overflow-hidden rounded-sm border border-[var(--border-subtle)] bg-[#020408]">
         <canvas
           ref={canvasRef}
           width={512}
@@ -381,26 +381,26 @@ export default function BlinkViewer({
         />
         {viewMode === 'combine' || viewMode === 'false_color' ? (
           (viewMode === 'combine' ? combineCaption : falseColorCaption) && (
-            <div className="absolute left-3 top-3 rounded border border-[var(--accent-cyan)] bg-[#060810cc] px-2 py-1 text-[11px] font-mono text-[var(--accent-cyan)]">
+            <div className="absolute left-3 top-3 rounded border border-[var(--accent-cyan)] bg-[#0a0b0fcc] px-2 py-1 text-[11px] font-mono text-[var(--accent-cyan)]">
               {viewMode === 'combine' ? combineCaption : falseColorCaption}
             </div>
           )
         ) : (
           displayFrame && (
-            <div className="absolute left-3 top-3 rounded border border-[var(--accent-cyan)] bg-[#060810cc] px-2 py-1 text-[11px] font-mono text-[var(--accent-cyan)]">
+            <div className="absolute left-3 top-3 rounded border border-[var(--accent-cyan)] bg-[#0a0b0fcc] px-2 py-1 text-[11px] font-mono text-[var(--accent-cyan)]">
               Epoch {viewMode === 'video' ? frameIndex + 1 : blinkA ? 1 : timeline.length} / {timeline.length} · {displayFrame.label}
             </div>
           )
         )}
         {activeFrame?.flags && viewMode !== 'combine' && viewMode !== 'false_color' && (
-          <div className="absolute right-3 top-3 rounded border border-[var(--border-subtle)] bg-[#060810cc] px-2 py-1 text-[10px] font-mono text-[var(--text-secondary)]">
+          <div className="absolute right-3 top-3 rounded border border-[var(--border-subtle)] bg-[#0a0b0fcc] px-2 py-1 text-[10px] font-mono text-[var(--text-secondary)]">
             Clean {activeFrame.flags.clean_pct.toFixed(1)}% · Flags {activeFrame.flags.bad_px}
           </div>
         )}
         {(simulatedOverlay || ((viewMode === 'combine' || viewMode === 'false_color') ? false : (activeFrame?.isSimulated || displayFrame?.isSimulated))) && (
           <div
             data-testid="simulated-frame-badge"
-            className="absolute bottom-3 right-3 rounded border border-amber-400 bg-amber-400/90 px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wide text-[#060810]"
+            className="absolute bottom-3 right-3 rounded border border-amber-400 bg-amber-400/90 px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wide text-[#0a0b0f]"
           >
             Demo mode · simulated, not SPHEREx data
           </div>
@@ -412,7 +412,7 @@ export default function BlinkViewer({
           </div>
         )}
         {hovered && (
-          <div className="absolute bottom-3 left-3 max-w-xs rounded border border-[var(--accent-gold)] bg-[#060810dd] p-2 text-[10px] font-mono text-[var(--text-primary)]">
+          <div className="absolute bottom-3 left-3 max-w-xs rounded border border-[var(--accent-gold)] bg-[#0a0b0fdd] p-2 text-[10px] font-mono text-[var(--text-primary)]">
             <div className="font-bold text-[var(--accent-gold)]">{hovered.classification}</div>
             ΔSNR {hovered.snr_change.toFixed(1)}σ · confidence {(hovered.confidence_score * 100).toFixed(0)}%
           </div>

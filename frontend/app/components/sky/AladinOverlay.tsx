@@ -50,7 +50,7 @@ export default function AladinOverlay({ ra, dec, fov }: AladinOverlayProps) {
       aladin.addCatalog(
         window.A.catalogFromVizieR('I/355/gaiadr3', target, fov / 2, {
           name: 'Gaia DR3',
-          color: '#00e5ff',
+          color: '#D4AF37',
           sourceSize: 6,
         })
       );
@@ -81,7 +81,7 @@ export default function AladinOverlay({ ra, dec, fov }: AladinOverlayProps) {
           <MapPinned className="h-4 w-4 text-[var(--accent-cyan)]" />
           Gaia DR3 + unWISE verification overlay
         </div>
-        <span className="rounded bg-[rgba(0,229,255,0.1)] px-2 py-0.5 text-[10px] font-mono text-[var(--accent-cyan)]">
+        <span className="rounded bg-[rgba(212,175,55,0.1)] px-2 py-0.5 text-[10px] font-mono text-[var(--accent-cyan)]">
           unWISE 2010–2014 ↔ SPHEREx 2025–2026 ≈ 15 years
         </span>
       </div>

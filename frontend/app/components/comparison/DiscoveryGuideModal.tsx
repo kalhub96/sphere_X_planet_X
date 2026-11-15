@@ -29,11 +29,11 @@ export default function DiscoveryGuideModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-fade-in">
-      <div className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[#0d1220] p-6 text-[var(--text-primary)] shadow-2xl shadow-cyan-950/40">
+      <div className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-sm border border-[var(--border-subtle)] bg-[#121318] p-6 text-[var(--text-primary)] shadow-2xl shadow-cyan-950/40">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[rgba(0,229,255,0.15)] text-[var(--accent-cyan)]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-[rgba(212,175,55,0.15)] text-[var(--accent-cyan)]">
               <Telescope className="h-5 w-5" />
             </div>
             <div>
@@ -47,7 +47,7 @@ export default function DiscoveryGuideModal({
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-[var(--text-muted)] hover:bg-white/10 hover:text-white"
+            className="rounded-sm p-1 text-[var(--text-muted)] hover:bg-white/10 hover:text-white"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -57,7 +57,7 @@ export default function DiscoveryGuideModal({
         {/* 4 Pillars Grid */}
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           {/* Technique 1 */}
-          <div className="rounded-lg border border-[rgba(0,229,255,0.2)] bg-[rgba(0,229,255,0.04)] p-4">
+          <div className="rounded-sm border border-[rgba(212,175,55,0.2)] bg-[rgba(212,175,55,0.04)] p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--accent-cyan)]">
               <Play className="h-4 w-4" />
               <span>1. Multi-Epoch Flipbook Motion</span>
@@ -71,7 +71,7 @@ export default function DiscoveryGuideModal({
           </div>
 
           {/* Technique 2 */}
-          <div className="rounded-lg border border-[rgba(255,209,102,0.25)] bg-[rgba(255,209,102,0.04)] p-4">
+          <div className="rounded-sm border border-[rgba(230,198,92,0.25)] bg-[rgba(230,198,92,0.04)] p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--accent-gold)]">
               <Layers className="h-4 w-4" />
               <span>2. Detector Array Coadding (D1–D6)</span>
@@ -85,7 +85,7 @@ export default function DiscoveryGuideModal({
           </div>
 
           {/* Technique 3 */}
-          <div className="rounded-lg border border-[rgba(239,71,111,0.25)] bg-[rgba(239,71,111,0.04)] p-4">
+          <div className="rounded-sm border border-[rgba(224,113,95,0.25)] bg-[rgba(224,113,95,0.04)] p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--accent-pink)]">
               <Sliders className="h-4 w-4" />
               <span>3. Difference Dipoles (Epoch N − 1)</span>
@@ -99,7 +99,7 @@ export default function DiscoveryGuideModal({
           </div>
 
           {/* Technique 4 */}
-          <div className="rounded-lg border border-[rgba(6,214,160,0.25)] bg-[rgba(6,214,160,0.04)] p-4">
+          <div className="rounded-sm border border-[rgba(143,188,143,0.25)] bg-[rgba(143,188,143,0.04)] p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--accent-green)]">
               <Compass className="h-4 w-4" />
               <span>4. 15-Year Multi-Mission Baseline</span>
@@ -127,7 +127,7 @@ export default function DiscoveryGuideModal({
                   onSelectPreset(preset);
                   onClose();
                 }}
-                className="flex flex-col items-start rounded-lg border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.03)] p-2.5 text-left transition-all hover:border-[var(--accent-cyan)] hover:bg-[rgba(0,229,255,0.08)]"
+                className="flex flex-col items-start rounded-sm border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.03)] p-2.5 text-left transition-all hover:border-[var(--accent-cyan)] hover:bg-[rgba(212,175,55,0.08)]"
               >
                 <div className="flex w-full items-center justify-between">
                   <span className="text-xs font-bold text-white">{preset.name}</span>
@@ -154,7 +154,7 @@ export default function DiscoveryGuideModal({
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg bg-[var(--accent-cyan)] px-4 py-1.5 text-xs font-bold text-[#060810] hover:bg-[#00c8e0]"
+            className="rounded-sm bg-[var(--accent-cyan)] px-4 py-1.5 text-xs font-bold text-[#0a0b0f] hover:bg-[#00c8e0]"
           >
             Start Investigating
           </button>

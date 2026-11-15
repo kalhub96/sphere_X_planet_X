@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Observation, Candidate } from '../types';
+import type { PlanetXSceneData } from '../lib/planetXScale';
 import type { DetectorArray } from '../config/benchmarks';
 
 export type InvestigationMode = 'video' | 'blink' | 'slider' | 'difference' | 'combine' | 'false_color';
@@ -44,13 +45,40 @@ export interface SkyState {
   activeCandidate: Candidate | null;
   hoveredObject: HoveredSkyObject | null;
 
+  // 3D Celestial Sphere Display Toggles
+  showEquatorialGrid: boolean;
+  showEclipticGrid: boolean;
+  showGalacticPlane: boolean;
+  showOrrery: boolean;
+  showScanPath: boolean;
+  showStarLabels: boolean;
+  autoRotate: boolean;
+
+  // View Mode: Sky Survey vs Spacecraft Observation Geometry
+  viewMode: 'sky' | 'spacecraft';
+  showSunExclusion: boolean;
+  showBoresight: boolean;
+  show3DImageRelief: boolean;
+  showObservationVolume: boolean;
+  showTeardown: boolean;
+
+  // Hypothetical Planet X direction and 3D orbit on the sky / orrery
+  planetXMarker: { ra: number; dec: number; name: string } | null;
+  setPlanetXMarker: (m: { ra: number; dec: number; name: string } | null) => void;
+  // Planet X orbit + planets (log-scaled comparison drawn in the 3D view)
+  planetXScene: PlanetXSceneData | null;
+  setPlanetXScene: (d: PlanetXSceneData | null) => void;
+  planetXOrbitPath: [number, number, number][] | null;
+  setPlanetXOrbitPath: (p: [number, number, number][] | null) => void;
+
   // Actions
+  setViewMode: (mode: 'sky' | 'spacecraft') => void;
   setCoordinates: (ra: number, dec: number, presetName?: string) => void;
   setFov: (fov: number) => void;
   setRadius: (radius: number) => void;
-  setSelectedBand: (band: number) => void;
   setSelectedArray: (array: DetectorArray | null) => void;
   setInvestigationMode: (mode: InvestigationMode) => void;
+  setSelectedBand: (band: number) => void;
   setSimulate: (simulate: boolean) => void;
   setCombine: (plus: number[], minus: number[]) => void;
   setCombineRole: (epoch: number, role: CombineRole) => void;
@@ -59,6 +87,21 @@ export interface SkyState {
   selectObsB: (obs: Observation | null) => void;
   setActiveCandidate: (cand: Candidate | null) => void;
   setHoveredObject: (obj: HoveredSkyObject | null) => void;
+  toggleSetting: (
+    key:
+      | 'showEquatorialGrid'
+      | 'showEclipticGrid'
+      | 'showGalacticPlane'
+      | 'showOrrery'
+      | 'showScanPath'
+      | 'showStarLabels'
+      | 'autoRotate'
+      | 'showSunExclusion'
+      | 'showBoresight'
+      | 'show3DImageRelief'
+      | 'showObservationVolume'
+      | 'showTeardown'
+  ) => void;
   reset: () => void;
 }
 
@@ -82,6 +125,30 @@ export const useSkyStore = create<SkyState>((set) => ({
   activeCandidate: null,
   hoveredObject: null,
 
+  showEquatorialGrid: true,
+  showEclipticGrid: true,
+  showGalacticPlane: true,
+  showOrrery: true,
+  showScanPath: true,
+  showStarLabels: true,
+  autoRotate: true,
+
+  viewMode: 'sky',
+  showSunExclusion: true,
+  showBoresight: true,
+  show3DImageRelief: true,
+  showObservationVolume: true,
+  showTeardown: false,
+
+  planetXMarker: null,
+  setPlanetXMarker: (planetXMarker) => set({ planetXMarker }),
+  planetXScene: null,
+  setPlanetXScene: (planetXScene) => set({ planetXScene }),
+  planetXOrbitPath: null,
+  setPlanetXOrbitPath: (planetXOrbitPath) => set({ planetXOrbitPath }),
+
+  setViewMode: (viewMode) => set({ viewMode }),
+
   setCoordinates: (ra, dec, presetName) =>
     set({
       ra,
@@ -91,9 +158,9 @@ export const useSkyStore = create<SkyState>((set) => ({
 
   setFov: (fov) => set({ fov, radius: fov / 2 }),
   setRadius: (radius) => set({ radius, fov: radius * 2 }),
-  setSelectedBand: (selectedBand) => set({ selectedBand }),
   setSelectedArray: (selectedArray) => set({ selectedArray }),
   setInvestigationMode: (investigationMode) => set({ investigationMode }),
+  setSelectedBand: (selectedBand) => set({ selectedBand }),
   setSimulate: (simulate) => set({ simulate }),
   setCombine: (combinePlus, combineMinus) => set({ combinePlus, combineMinus }),
   setCombineRole: (epoch, role) =>
@@ -109,6 +176,11 @@ export const useSkyStore = create<SkyState>((set) => ({
   selectObsB: (selectedObsB) => set({ selectedObsB }),
   setActiveCandidate: (activeCandidate) => set({ activeCandidate }),
   setHoveredObject: (hoveredObject) => set({ hoveredObject }),
+
+  toggleSetting: (key) =>
+    set((state) => ({
+      [key]: !state[key],
+    })),
 
   reset: () =>
     set({

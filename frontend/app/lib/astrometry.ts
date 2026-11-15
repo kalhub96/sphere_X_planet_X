@@ -1,34 +1,30 @@
+import * as THREE from 'three';
+
 const DEG2RAD = Math.PI / 180;
 const RAD2DEG = 180 / Math.PI;
 
-export interface Vector3D {
-  x: number;
-  y: number;
-  z: number;
-}
-
 /**
- * Converts ICRS J2000 coordinates (RA, Dec in degrees) to a 3D unit vector.
+ * Converts ICRS J2000 coordinates (RA, Dec in degrees) to a 3D Vector on a sphere of radius R.
  * Coordinate convention:
  * Y is North Celestial Pole (Dec = +90°)
  * X is Vernal Equinox (RA = 0°, Dec = 0°)
  * Z is RA = 90°, Dec = 0°
  */
-export function icrsToUnitVector(raDeg: number, decDeg: number, radius = 1): Vector3D {
+export function icrsToUnitVector(raDeg: number, decDeg: number, radius = 100): THREE.Vector3 {
   const raRad = raDeg * DEG2RAD;
   const decRad = decDeg * DEG2RAD;
-  return {
-    x: radius * Math.cos(decRad) * Math.cos(raRad),
-    y: radius * Math.sin(decRad),
-    z: radius * Math.cos(decRad) * Math.sin(raRad),
-  };
+  return new THREE.Vector3(
+    radius * Math.cos(decRad) * Math.cos(raRad),
+    radius * Math.sin(decRad),
+    radius * Math.cos(decRad) * Math.sin(raRad)
+  );
 }
 
 /**
  * Inverse conversion: 3D point on or near sphere -> (RA, Dec in degrees)
  */
-export function vectorToIcrs(vec: Vector3D): { ra: number; dec: number } {
-  const r = Math.sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+export function vectorToIcrs(vec: THREE.Vector3): { ra: number; dec: number } {
+  const r = vec.length();
   if (r === 0) return { ra: 0, dec: 0 };
 
   const decRad = Math.asin(Math.max(-1, Math.min(1, vec.y / r)));
@@ -121,6 +117,413 @@ export function formatDec(decDeg: number): string {
   const seconds = (minutesDecimal - minutes) * 60;
   return `${sign}${deg.toString().padStart(2, '0')}° ${minutes.toString().padStart(2, '0')}' ${seconds.toFixed(1).padStart(4, '0')}"`;
 }
+
+/**
+ * SPHEREx Linear Variable Filter 102-band formula:
+ * lambda_i = 0.75 * (5.0 / 0.75)^((i - 1) / 101)  for i in [1..102]
+ */
+export function getSPHERExWavelength(bandIndex: number): number {
+  const clamped = Math.max(1, Math.min(102, Math.round(bandIndex)));
+  return 0.75 * Math.pow(5.0 / 0.75, (clamped - 1) / 101);
+}
+
+/**
+ * Maps SPHEREx wavelength (0.75 - 5.0 µm) to a representative false-color hexadecimal string and CSS color
+ */
+export function getWavelengthColor(wavelengthUm: number): { hex: number; css: string; name: string } {
+  if (wavelengthUm < 1.1) {
+    // Near-IR Band 1 (0.75 - 1.1 µm): Deep Violet/Indigo
+    return { hex: 0x8A2BE2, css: '#8A2BE2', name: 'Near-IR (B1)' };
+  } else if (wavelengthUm < 1.8) {
+    // Near-IR Band 2 (1.1 - 1.8 µm): Cyan/Ice Blue
+    return { hex: 0x00E5FF, css: '#00E5FF', name: 'Near-IR (B2)' };
+  } else if (wavelengthUm < 2.5) {
+    // Short-wave IR Band 3 (1.8 - 2.5 µm): Amber/Gold
+    return { hex: 0xFFD166, css: '#FFD166', name: 'SWIR (B3)' };
+  } else if (wavelengthUm < 3.8) {
+    // Mid-wave IR Band 4 (2.5 - 3.8 µm): Radiant Orange
+    return { hex: 0xFF6B35, css: '#FF6B35', name: 'MWIR (B4)' };
+  } else {
+    // Thermal IR Band 5/6 (3.8 - 5.0 µm): Deep Crimson
+    return { hex: 0xEF476F, css: '#EF476F', name: 'Thermal-IR (B5/6)' };
+  }
+}
+
+/**
+ * Julian Date from JavaScript Date
+ */
+export function getJulianDate(date: Date = new Date()): number {
+  return date.getTime() / 86400000 + 2440587.5;
+}
+
+/**
+ * Kepler's equation solver for eccentric anomaly E:
+ * M = E - e * sin(E)
+ */
+export function solveKepler(M: number, e: number, tolerance = 1e-8): number {
+  let E = M;
+  for (let iter = 0; iter < 100; iter++) {
+    const dE = (M - E + e * Math.sin(E)) / (1 - e * Math.cos(E));
+    E += dE;
+    if (Math.abs(dE) < tolerance) break;
+  }
+  return E;
+}
+
+/**
+ * Keplerian orbital elements to 3D Cartesian position (Solar System Scope physics)
+ * Defaults to scale = 1.0 (calibrated 3D visual units inside radius 100 celestial sphere)
+ */
+export function keplerToCartesian(
+  a: number,
+  e: number,
+  iDeg: number,
+  omegaDeg: number,
+  OmegaDeg: number,
+  MDeg: number,
+  scale = 1.0
+): THREE.Vector3 {
+  const i = iDeg * DEG2RAD;
+  const omega = omegaDeg * DEG2RAD;
+  const Omega = OmegaDeg * DEG2RAD;
+  const M = MDeg * DEG2RAD;
+
+  const E = solveKepler(M, e);
+  const nu = 2 * Math.atan2(
+    Math.sqrt(1 + e) * Math.sin(E / 2),
+    Math.sqrt(1 - e) * Math.cos(E / 2)
+  );
+
+  const r = a * (1 - e * Math.cos(E)) * scale;
+  const x_pf = r * Math.cos(nu);
+  const y_pf = r * Math.sin(nu);
+
+  const ci = Math.cos(i);
+  const si = Math.sin(i);
+  const co = Math.cos(omega);
+  const so = Math.sin(omega);
+  const cO = Math.cos(Omega);
+  const sO = Math.sin(Omega);
+
+  const Px = cO * co - sO * so * ci;
+  const Py = sO * co + cO * so * ci;
+  const Pz = so * si;
+
+  const Qx = -cO * so - sO * co * ci;
+  const Qy = -sO * so + cO * co * ci;
+  const Qz = co * si;
+
+  return new THREE.Vector3(
+    x_pf * Px + y_pf * Qx,
+    x_pf * Pz + y_pf * Qz,
+    x_pf * Py + y_pf * Qy
+  );
+}
+
+/**
+ * Solar System Scope Calibrated Planetary & Celestial Body Interface
+ */
+export interface CelestialOrbit {
+  name: string;
+  category: 'Planet' | 'Dwarf Planet' | 'Moon' | 'Comet';
+  a: number; // Calibrated 3D visual semi-major axis (guarantees zero collisions)
+  realAU: number; // Real astronomical semi-major axis (AU) for telemetry
+  e: number; // Orbital eccentricity
+  i: number; // Orbital inclination (degrees)
+  omega: number; // Argument of periapsis (degrees)
+  Omega: number; // Longitude of ascending node (degrees)
+  color: number; // Orbital path and UI indicator color
+  size: number; // 3D sphere visual radius
+  periodDays: number; // Real orbital period in Earth days
+  rotationSpeed?: number; // Visual axial rotation rate
+  description: string; // Scientific description
+}
+
+/**
+ * Solar System Scope calibrated planetary orbital elements.
+ * Distances (a) are non-linearly mapped to guarantee clear visual spacing,
+ * prevent any orbital clipping/collisions, and maintain clear clearance from the Sun's corona (R=4.5).
+ */
+export const PLANET_ORBITS: CelestialOrbit[] = [
+  {
+    name: 'Mercury',
+    category: 'Planet',
+    a: 10.5,
+    realAU: 0.387,
+    e: 0.2056,
+    i: 7.00,
+    omega: 29.12,
+    Omega: 48.33,
+    color: 0x9e9e9e,
+    size: 0.62,
+    periodDays: 87.97,
+    description: 'Innermost rocky terrestrial planet; heavily cratered surface and high orbital eccentricity.',
+  },
+  {
+    name: 'Venus',
+    category: 'Planet',
+    a: 16.5,
+    realAU: 0.723,
+    e: 0.0068,
+    i: 3.39,
+    omega: 54.88,
+    Omega: 76.68,
+    color: 0xffd166,
+    size: 0.95,
+    periodDays: 224.70,
+    description: 'Dense carbon dioxide atmosphere with runaway greenhouse effect and retrograde axial rotation.',
+  },
+  {
+    name: 'Earth',
+    category: 'Planet',
+    a: 22.8,
+    realAU: 1.000,
+    e: 0.0167,
+    i: 0.00,
+    omega: 114.21,
+    Omega: 0.00,
+    color: 0x00e5ff,
+    size: 1.05,
+    periodDays: 365.26,
+    description: 'Third planet with abundant liquid water oceans, active plate tectonics, and nitrogen-oxygen atmosphere.',
+  },
+  {
+    name: 'Mars',
+    category: 'Planet',
+    a: 29.8,
+    realAU: 1.524,
+    e: 0.0934,
+    i: 1.85,
+    omega: 286.50,
+    Omega: 49.56,
+    color: 0xff6b35,
+    size: 0.80,
+    periodDays: 686.98,
+    description: 'The Red Planet; iron oxide crust, Olympus Mons shield volcano, and polar water-ice caps.',
+  },
+  {
+    name: 'Ceres',
+    category: 'Dwarf Planet',
+    a: 36.8,
+    realAU: 2.767,
+    e: 0.0758,
+    i: 10.59,
+    omega: 73.60,
+    Omega: 80.33,
+    color: 0xcbc5b9,
+    size: 0.46,
+    periodDays: 1682.0,
+    description: 'Largest object and only dwarf planet in the Main Asteroid Belt; water-ice mantle and cryovolcanoes.',
+  },
+  {
+    name: 'Jupiter',
+    category: 'Planet',
+    a: 47.5,
+    realAU: 5.204,
+    e: 0.0485,
+    i: 1.30,
+    omega: 273.87,
+    Omega: 100.46,
+    color: 0xddaa44,
+    size: 2.30,
+    periodDays: 4332.59,
+    description: 'Largest gas giant planet; Great Red Spot anticyclonic storm and powerful magnetosphere.',
+  },
+  {
+    name: 'Saturn',
+    category: 'Planet',
+    a: 59.5,
+    realAU: 9.582,
+    e: 0.0541,
+    i: 2.49,
+    omega: 339.39,
+    Omega: 113.67,
+    color: 0xead6b8,
+    size: 1.90,
+    periodDays: 10759.22,
+    description: 'Prominent, magnificent ring system composed of water-ice particles and silicates.',
+  },
+  {
+    name: 'Uranus',
+    category: 'Planet',
+    a: 71.5,
+    realAU: 19.20,
+    e: 0.0472,
+    i: 0.77,
+    omega: 96.99,
+    Omega: 74.01,
+    color: 0x70d6ff,
+    size: 1.40,
+    periodDays: 30685.40,
+    description: 'Ice giant with extreme 97.77° axial tilt; pale cyan methane atmosphere and faint ring system.',
+  },
+  {
+    name: 'Neptune',
+    category: 'Planet',
+    a: 82.5,
+    realAU: 30.05,
+    e: 0.0086,
+    i: 1.77,
+    omega: 273.19,
+    Omega: 131.78,
+    color: 0x4361ee,
+    size: 1.35,
+    periodDays: 60189.00,
+    description: 'Outermost ice giant planet; supersonic winds, vivid azure coloration, and retrograde moon Triton.',
+  },
+  {
+    name: 'Pluto',
+    category: 'Dwarf Planet',
+    a: 76.0,
+    realAU: 39.48,
+    e: 0.2488,
+    i: 17.16,
+    omega: 113.76,
+    Omega: 110.30,
+    color: 0xc6a487,
+    size: 0.44,
+    periodDays: 90560.0,
+    description: 'Kuiper Belt dwarf planet; high orbital inclination and 2:3 orbital resonance crossing inside Neptune.',
+  },
+];
+
+/**
+ * Solar System Scope Featured Comets with Dynamic 3D Solar Wind Tails
+ */
+export interface CometOrbit extends CelestialOrbit {
+  tailColor: number;
+  dustTailColor: number;
+  baseTailLength: number;
+}
+
+export const COMET_ORBITS: CometOrbit[] = [
+  {
+    name: '1P/Halley',
+    category: 'Comet',
+    a: 48.0,
+    realAU: 17.83,
+    e: 0.78,
+    i: 162.26,
+    omega: 111.33,
+    Omega: 58.42,
+    color: 0x38bdf8,
+    size: 0.50,
+    periodDays: 27500, // 75.3 years
+    tailColor: 0x00e5ff,
+    dustTailColor: 0xffd166,
+    baseTailLength: 14.0,
+    description: 'Most famous periodic retrograde comet; source of Orionid and Eta Aquariid meteor showers.',
+  },
+  {
+    name: 'C/2020 F3 (NEOWISE)',
+    category: 'Comet',
+    a: 52.0,
+    realAU: 23.5,
+    e: 0.81,
+    i: 128.94,
+    omega: 37.28,
+    Omega: 61.01,
+    color: 0x67e8f9,
+    size: 0.48,
+    periodDays: 32000,
+    tailColor: 0x38bdf8,
+    dustTailColor: 0xfef08a,
+    baseTailLength: 16.0,
+    description: 'Long-period retrograde comet discovered by NASA NEOWISE infrared space telescope.',
+  },
+];
+
+/**
+ * Bright Navigation & Reference Star Catalog (Hipparcos subset)
+ */
+export interface CatalogStar {
+  name: string;
+  ra: number;
+  dec: number;
+  mag: number;
+  colorHex: number;
+  spectralType: string;
+}
+
+export const BRIGHT_STARS: CatalogStar[] = [
+  { name: 'Sirius', ra: 101.287, dec: -16.716, mag: -1.46, colorHex: 0xA0C4FF, spectralType: 'A1V' },
+  { name: 'Canopus', ra: 95.988, dec: -52.696, mag: -0.74, colorHex: 0xFDF0D5, spectralType: 'F0II' },
+  { name: 'Rigil Kentaurus', ra: 219.902, dec: -60.834, mag: -0.27, colorHex: 0xFFE066, spectralType: 'G2V' },
+  { name: 'Arcturus', ra: 213.915, dec: 19.182, mag: -0.05, colorHex: 0xFF9E00, spectralType: 'K1.5III' },
+  { name: 'Vega', ra: 279.235, dec: 38.784, mag: 0.03, colorHex: 0xC0D6DF, spectralType: 'A0V' },
+  { name: 'Capella', ra: 79.172, dec: 45.998, mag: 0.08, colorHex: 0xFFE066, spectralType: 'G3III' },
+  { name: 'Rigel', ra: 78.634, dec: -8.202, mag: 0.13, colorHex: 0x80B918, spectralType: 'B8Ia' },
+  { name: 'Procyon', ra: 114.825, dec: 5.225, mag: 0.38, colorHex: 0xFDF0D5, spectralType: 'F5IV' },
+  { name: 'Betelgeuse', ra: 88.793, dec: 7.407, mag: 0.50, colorHex: 0xFF5400, spectralType: 'M1-2Ia' },
+  { name: 'Achernar', ra: 24.429, dec: -57.237, mag: 0.46, colorHex: 0x90E0EF, spectralType: 'B6Vep' },
+  { name: 'Hadar', ra: 210.956, dec: -60.373, mag: 0.61, colorHex: 0x90E0EF, spectralType: 'B1III' },
+  { name: 'Altair', ra: 297.696, dec: 8.868, mag: 0.77, colorHex: 0xE8F1F2, spectralType: 'A7V' },
+  { name: 'Acrux', ra: 186.649, dec: -63.099, mag: 0.76, colorHex: 0x90E0EF, spectralType: 'B0.5IV' },
+  { name: 'Aldebaran', ra: 68.980, dec: 16.509, mag: 0.86, colorHex: 0xFF7900, spectralType: 'K5III' },
+  { name: 'Antares', ra: 247.352, dec: -26.432, mag: 1.06, colorHex: 0xFF3600, spectralType: 'M1.5Iab' },
+  { name: 'Spica', ra: 201.298, dec: -11.161, mag: 0.98, colorHex: 0x90E0EF, spectralType: 'B1III' },
+  { name: 'Pollux', ra: 116.329, dec: 28.026, mag: 1.14, colorHex: 0xFFB703, spectralType: 'K0III' },
+  { name: 'Fomalhaut', ra: 344.413, dec: -29.622, mag: 1.16, colorHex: 0xE8F1F2, spectralType: 'A3V' },
+  { name: 'Deneb', ra: 310.358, dec: 45.280, mag: 1.25, colorHex: 0xE8F1F2, spectralType: 'A2Ia' },
+  { name: 'Mimosa', ra: 191.930, dec: -59.689, mag: 1.25, colorHex: 0x90E0EF, spectralType: 'B0.5III' },
+  { name: 'Regulus', ra: 152.093, dec: 11.967, mag: 1.36, colorHex: 0x90E0EF, spectralType: 'B8IVn' },
+  { name: 'Castor', ra: 113.650, dec: 31.888, mag: 1.58, colorHex: 0xE8F1F2, spectralType: 'A1V' },
+  { name: 'Bellatrix', ra: 81.283, dec: 6.350, mag: 1.64, colorHex: 0x90E0EF, spectralType: 'B2III' },
+  { name: 'Alnilam', ra: 84.053, dec: -1.202, mag: 1.69, colorHex: 0x90E0EF, spectralType: 'B0Ia' },
+  { name: 'Alnitak', ra: 85.190, dec: -1.943, mag: 1.74, colorHex: 0x90E0EF, spectralType: 'O9.7Ib' },
+  { name: 'Alioth', ra: 193.507, dec: 55.960, mag: 1.77, colorHex: 0xE8F1F2, spectralType: 'A1III' },
+  { name: 'Dubhe', ra: 165.932, dec: 61.751, mag: 1.79, colorHex: 0xFFB703, spectralType: 'K0III' },
+  { name: 'Mirfak', ra: 51.081, dec: 49.861, mag: 1.82, colorHex: 0xFDF0D5, spectralType: 'F5Ib' },
+  { name: 'Polaris', ra: 37.955, dec: 89.264, mag: 1.98, colorHex: 0xFDF0D5, spectralType: 'F7Ib' },
+];
+
+/**
+ * Standard Sky Presets for Instant Exploration
+ */
+export const SKY_PRESETS = [
+  {
+    name: 'Orion Nebula (M42)',
+    ra: 83.8221,
+    dec: -5.3911,
+    description: 'Active star-forming region rich in young stellar objects and brown dwarfs.',
+    category: 'Nebula' as const,
+  },
+  {
+    name: 'Pleiades Cluster (M45)',
+    ra: 56.75,
+    dec: 24.1167,
+    description: 'Open star cluster with reflection nebulae and high proper-motion candidate stars.',
+    category: 'Star Cluster' as const,
+  },
+  {
+    name: 'Galactic Center (Sgr A*)',
+    ra: 266.4168,
+    dec: -29.0078,
+    description: 'Extremely dense stellar field and supermassive black hole horizon.',
+    category: 'Galactic' as const,
+  },
+  {
+    name: 'North Ecliptic Pole (NEP)',
+    ra: 270.0,
+    dec: 66.56,
+    description: 'SPHEREx deep survey calibration field with over 100 overlapping passes.',
+    category: 'Deep Survey' as const,
+  },
+  {
+    name: 'South Ecliptic Pole (SEP)',
+    ra: 90.0,
+    dec: -66.56,
+    description: 'SPHEREx deep survey southern continuous viewing zone.',
+    category: 'Deep Survey' as const,
+  },
+  {
+    name: 'Andromeda Galaxy (M31)',
+    ra: 10.6847,
+    dec: 41.2687,
+    description: 'Nearest major spiral galaxy; spatial distribution of red giant branch and IR sources.',
+    category: 'Deep Survey' as const,
+  },
+];
 
 /**
  * Parses Right Ascension string into decimal degrees [0, 360).
@@ -286,143 +689,3 @@ export function parseCoordinateInput(input: string): { ra: number; dec: number }
 
   return null;
 }
-
-/**
- * SPHEREx Linear Variable Filter 102-band formula:
- * lambda_i = 0.75 * (5.0 / 0.75)^((i - 1) / 101)  for i in [1..102]
- */
-export function getSPHERExWavelength(bandIndex: number): number {
-  const clamped = Math.max(1, Math.min(102, Math.round(bandIndex)));
-  return 0.75 * Math.pow(5.0 / 0.75, (clamped - 1) / 101);
-}
-
-/**
- * Maps SPHEREx wavelength (0.75 - 5.0 µm) to a representative false-color hexadecimal string and CSS color
- */
-export function getWavelengthColor(wavelengthUm: number): { hex: number; css: string; name: string } {
-  if (wavelengthUm < 1.1) {
-    return { hex: 0x8a2be2, css: '#8A2BE2', name: 'Near-IR (B1)' };
-  } else if (wavelengthUm < 1.8) {
-    return { hex: 0x00e5ff, css: '#00E5FF', name: 'Near-IR (B2)' };
-  } else if (wavelengthUm < 2.5) {
-    return { hex: 0xffd166, css: '#FFD166', name: 'SWIR (B3)' };
-  } else if (wavelengthUm < 3.8) {
-    return { hex: 0xff6b35, css: '#FF6B35', name: 'MWIR (B4)' };
-  } else {
-    return { hex: 0xef476f, css: '#EF476F', name: 'Thermal-IR (B5/6)' };
-  }
-}
-
-/**
- * Julian Date from JavaScript Date
- */
-export function getJulianDate(date: Date = new Date()): number {
-  return date.getTime() / 86400000 + 2440587.5;
-}
-
-/**
- * Kepler's equation solver for eccentric anomaly E:
- * M = E - e * sin(E)
- */
-export function solveKepler(M: number, e: number, tolerance = 1e-8): number {
-  let E = M;
-  for (let iter = 0; iter < 100; iter++) {
-    const dE = (M - E + e * Math.sin(E)) / (1 - e * Math.cos(E));
-    E += dE;
-    if (Math.abs(dE) < tolerance) break;
-  }
-  return E;
-}
-
-
-/**
- * Bright Navigation & Reference Star Catalog (Hipparcos subset)
- */
-export interface CatalogStar {
-  name: string;
-  ra: number;
-  dec: number;
-  mag: number;
-  colorHex: number;
-  spectralType: string;
-}
-
-export const BRIGHT_STARS: CatalogStar[] = [
-  { name: 'Sirius', ra: 101.287, dec: -16.716, mag: -1.46, colorHex: 0xa0c4ff, spectralType: 'A1V' },
-  { name: 'Canopus', ra: 95.988, dec: -52.696, mag: -0.74, colorHex: 0xfdf0d5, spectralType: 'F0II' },
-  { name: 'Rigil Kentaurus', ra: 219.902, dec: -60.834, mag: -0.27, colorHex: 0xffe066, spectralType: 'G2V' },
-  { name: 'Arcturus', ra: 213.915, dec: 19.182, mag: -0.05, colorHex: 0xff9e00, spectralType: 'K1.5III' },
-  { name: 'Vega', ra: 279.235, dec: 38.784, mag: 0.03, colorHex: 0xc0d6df, spectralType: 'A0V' },
-  { name: 'Capella', ra: 79.172, dec: 45.998, mag: 0.08, colorHex: 0xffe066, spectralType: 'G3III' },
-  { name: 'Rigel', ra: 78.634, dec: -8.202, mag: 0.13, colorHex: 0x80b918, spectralType: 'B8Ia' },
-  { name: 'Procyon', ra: 114.825, dec: 5.225, mag: 0.38, colorHex: 0xfdf0d5, spectralType: 'F5IV' },
-  { name: 'Betelgeuse', ra: 88.793, dec: 7.407, mag: 0.5, colorHex: 0xff5400, spectralType: 'M1-2Ia' },
-  { name: 'Achernar', ra: 24.429, dec: -57.237, mag: 0.46, colorHex: 0x90e0ef, spectralType: 'B6Vep' },
-  { name: 'Hadar', ra: 210.956, dec: -60.373, mag: 0.61, colorHex: 0x90e0ef, spectralType: 'B1III' },
-  { name: 'Altair', ra: 297.696, dec: 8.868, mag: 0.77, colorHex: 0xe8f1f2, spectralType: 'A7V' },
-  { name: 'Acrux', ra: 186.649, dec: -63.099, mag: 0.76, colorHex: 0x90e0ef, spectralType: 'B0.5IV' },
-  { name: 'Aldebaran', ra: 68.98, dec: 16.509, mag: 0.86, colorHex: 0xff7900, spectralType: 'K5III' },
-  { name: 'Antares', ra: 247.352, dec: -26.432, mag: 1.06, colorHex: 0xff3600, spectralType: 'M1.5Iab' },
-  { name: 'Spica', ra: 201.298, dec: -11.161, mag: 0.98, colorHex: 0x90e0ef, spectralType: 'B1III' },
-  { name: 'Pollux', ra: 116.329, dec: 28.026, mag: 1.14, colorHex: 0xffb703, spectralType: 'K0III' },
-  { name: 'Fomalhaut', ra: 344.413, dec: -29.622, mag: 1.16, colorHex: 0xe8f1f2, spectralType: 'A3V' },
-  { name: 'Deneb', ra: 310.358, dec: 45.28, mag: 1.25, colorHex: 0xe8f1f2, spectralType: 'A2Ia' },
-  { name: 'Mimosa', ra: 191.93, dec: -59.689, mag: 1.25, colorHex: 0x90e0ef, spectralType: 'B0.5III' },
-  { name: 'Regulus', ra: 152.093, dec: 11.967, mag: 1.36, colorHex: 0x90e0ef, spectralType: 'B8IVn' },
-  { name: 'Castor', ra: 113.65, dec: 31.888, mag: 1.58, colorHex: 0xe8f1f2, spectralType: 'A1V' },
-  { name: 'Bellatrix', ra: 81.283, dec: 6.35, mag: 1.64, colorHex: 0x90e0ef, spectralType: 'B2III' },
-  { name: 'Alnilam', ra: 84.053, dec: -1.202, mag: 1.69, colorHex: 0x90e0ef, spectralType: 'B0Ia' },
-  { name: 'Alnitak', ra: 85.19, dec: -1.943, mag: 1.74, colorHex: 0x90e0ef, spectralType: 'O9.7Ib' },
-  { name: 'Alioth', ra: 193.507, dec: 55.96, mag: 1.77, colorHex: 0xe8f1f2, spectralType: 'A1III' },
-  { name: 'Dubhe', ra: 165.932, dec: 61.751, mag: 1.79, colorHex: 0xffb703, spectralType: 'K0III' },
-  { name: 'Mirfak', ra: 51.081, dec: 49.861, mag: 1.82, colorHex: 0xfdf0d5, spectralType: 'F5Ib' },
-  { name: 'Polaris', ra: 37.955, dec: 89.264, mag: 1.98, colorHex: 0xfdf0d5, spectralType: 'F7Ib' },
-];
-
-/**
- * Standard Sky Presets for Instant Exploration
- */
-export const SKY_PRESETS = [
-  {
-    name: 'Orion Nebula (M42)',
-    ra: 83.8221,
-    dec: -5.3911,
-    description: 'Active star-forming region rich in young stellar objects and brown dwarfs.',
-    category: 'Nebula' as const,
-  },
-  {
-    name: 'Pleiades Cluster (M45)',
-    ra: 56.75,
-    dec: 24.1167,
-    description: 'Open star cluster with reflection nebulae and high proper-motion candidate stars.',
-    category: 'Star Cluster' as const,
-  },
-  {
-    name: 'Galactic Center (Sgr A*)',
-    ra: 266.4168,
-    dec: -29.0078,
-    description: 'Extremely dense stellar field and supermassive black hole horizon.',
-    category: 'Galactic' as const,
-  },
-  {
-    name: 'North Ecliptic Pole (NEP)',
-    ra: 270.0,
-    dec: 66.56,
-    description: 'SPHEREx deep survey calibration field with over 100 overlapping passes.',
-    category: 'Deep Survey' as const,
-  },
-  {
-    name: 'South Ecliptic Pole (SEP)',
-    ra: 90.0,
-    dec: -66.56,
-    description: 'SPHEREx deep survey southern continuous viewing zone.',
-    category: 'Deep Survey' as const,
-  },
-  {
-    name: 'Andromeda Galaxy (M31)',
-    ra: 10.6847,
-    dec: 41.2687,
-    description: 'Nearest major spiral galaxy; spatial distribution of red giant branch and IR sources.',
-    category: 'Deep Survey' as const,
-  },
-];

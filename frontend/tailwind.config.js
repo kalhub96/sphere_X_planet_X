@@ -8,15 +8,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: '#060810',
-        card: '#0D1220',
-        'accent-cyan': '#00E5FF',
-        'accent-orange': '#FF6B35',
-        'accent-gold': '#FFD166',
-        'accent-green': '#06D6A0',
-        'accent-purple': '#9D4EDD',
-        danger: '#EF476F',
-        border: 'rgba(255, 255, 255, 0.08)',
+        background: '#0a0b0f',
+        card: '#121318',
+        'accent-cyan': '#D4AF37',
+        'accent-orange': '#C8793A',
+        'accent-gold': '#E6C65C',
+        'accent-green': '#8FBC8F',
+        'accent-purple': '#9B7EBD',
+        danger: '#E0715F',
+        border: 'rgba(212, 175, 55, 0.22)',
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],

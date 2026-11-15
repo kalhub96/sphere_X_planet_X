@@ -163,15 +163,15 @@ function CompareViewer() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060810] text-[#F0F4FF]">
+    <div className="min-h-screen bg-[#0a0b0f] text-[#F3EEE0]">
       {/* 1. Header */}
-      <header className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[#060810e8] px-4 py-3 backdrop-blur-md md:px-6">
+      <header className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[#0a0b0fe8] px-4 py-3 backdrop-blur-md md:px-6">
         <div className="flex items-center gap-3">
           <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-white">
             <ArrowLeft className="h-4 w-4" /> Home
           </Link>
           <div className="hidden h-4 w-px bg-[var(--border-subtle)] sm:block" />
-          <h1 className="flex items-center gap-2 text-sm font-bold sm:text-base">
+          <h1 className="st-serif flex items-center gap-2 text-2xl font-normal leading-none">
             <Layers className="h-5 w-5 text-[var(--accent-orange)]" /> SkyTrace Multi-Epoch Investigation
           </h1>
         </div>
@@ -179,7 +179,7 @@ function CompareViewer() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowGuide(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[rgba(0,229,255,0.3)] bg-[rgba(0,229,255,0.1)] px-2.5 py-1 text-xs font-semibold text-[var(--accent-cyan)] transition-colors hover:bg-[rgba(0,229,255,0.2)]"
+            className="inline-flex items-center gap-1.5 rounded-sm border border-[rgba(212,175,55,0.3)] bg-[rgba(212,175,55,0.1)] px-2.5 py-1 text-xs font-semibold text-[var(--accent-cyan)] transition-colors hover:bg-[rgba(212,175,55,0.2)]"
             title="Open Citizen Science discovery tutorial"
           >
             <BookOpen className="h-3.5 w-3.5" />
@@ -188,14 +188,14 @@ function CompareViewer() {
 
           <button
             onClick={handleShareUrl}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.05)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[rgba(255,255,255,0.1)]"
+            className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.05)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:bg-[rgba(255,255,255,0.1)]"
             title="Copy shareable URL with exact celestial coordinates, band, and mode"
           >
             {copiedUrl ? <Check className="h-3.5 w-3.5 text-[var(--accent-green)]" /> : <Share2 className="h-3.5 w-3.5 text-[var(--accent-cyan)]" />}
             <span>{copiedUrl ? 'Copied' : 'Share URL'}</span>
           </button>
 
-          <div className="hidden items-center gap-2 rounded border border-[rgba(0,229,255,0.25)] bg-[rgba(0,229,255,0.08)] px-2.5 py-1 text-[11px] font-mono sm:flex">
+          <div className="hidden items-center gap-2 rounded border border-[rgba(212,175,55,0.25)] bg-[rgba(212,175,55,0.08)] px-2.5 py-1 text-[11px] font-mono sm:flex">
             <Radio className="h-3.5 w-3.5 animate-pulse text-[var(--accent-cyan)]" />
             NASA SPHEREx DR1 + QR3
           </div>
@@ -203,7 +203,7 @@ function CompareViewer() {
       </header>
 
       {/* 2. Challenge Benchmark Presets Selector Bar */}
-      <section className="border-b border-[var(--border-subtle)] bg-[rgba(13,18,32,0.8)] px-4 py-2.5 md:px-6">
+      <section className="border-b border-[var(--border-subtle)] bg-[rgba(18,19,24,0.8)] px-4 py-2.5 md:px-6">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="flex items-center gap-1 text-[11px] font-mono uppercase tracking-wider text-[var(--accent-gold)]">
@@ -221,9 +221,9 @@ function CompareViewer() {
                     setSelectedArray(preset.array);
                     setSelectedBand(preset.band);
                   }}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
+                  className={`rounded-sm px-2.5 py-1 text-xs font-semibold transition-all ${
                     isActive
-                      ? 'border border-[var(--accent-cyan)] bg-[rgba(0,229,255,0.18)] text-[var(--accent-cyan)] shadow-[0_0_10px_rgba(0,229,255,0.2)]'
+                      ? 'border border-[var(--accent-cyan)] bg-[rgba(212,175,55,0.18)] text-[var(--accent-cyan)] shadow-[0_0_10px_rgba(212,175,55,0.2)]'
                       : 'border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.04)] text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.1)] hover:text-white'
                   }`}
                   title={`${preset.name} (${preset.description})`}
@@ -244,7 +244,7 @@ function CompareViewer() {
                   key={val}
                   onClick={() => setFov(val)}
                   className={`rounded px-1.5 py-0.5 text-[11px] ${
-                    fov === val ? 'bg-[var(--accent-cyan)] font-bold text-[#060810]' : 'bg-white/5 text-[var(--text-secondary)] hover:bg-white/10'
+                    fov === val ? 'bg-[var(--accent-cyan)] font-bold text-[#0a0b0f]' : 'bg-white/5 text-[var(--text-secondary)] hover:bg-white/10'
                   }`}
                 >
                   {val.toFixed(2)}°
@@ -298,7 +298,7 @@ function CompareViewer() {
               <button
                 onClick={() => setSelectedArray(null)}
                 className={`rounded px-1.5 py-0.5 text-[11px] ${
-                  selectedArray === null ? 'bg-[var(--accent-gold)] font-bold text-[#060810]' : 'bg-white/5 text-[var(--text-secondary)] hover:bg-white/10'
+                  selectedArray === null ? 'bg-[var(--accent-gold)] font-bold text-[#0a0b0f]' : 'bg-white/5 text-[var(--text-secondary)] hover:bg-white/10'
                 }`}
               >
                 Single
@@ -308,7 +308,7 @@ function CompareViewer() {
                   key={arr.id}
                   onClick={() => setSelectedArray(arr.id as DetectorArray)}
                   className={`rounded px-1.5 py-0.5 text-[11px] ${
-                    selectedArray === arr.id ? 'bg-[var(--accent-cyan)] font-bold text-[#060810]' : 'bg-white/5 text-[var(--text-secondary)] hover:bg-white/10'
+                    selectedArray === arr.id ? 'bg-[var(--accent-cyan)] font-bold text-[#0a0b0f]' : 'bg-white/5 text-[var(--text-secondary)] hover:bg-white/10'
                   }`}
                   title={`${arr.label}: ${arr.wavelengthRange} (Bands ${arr.bandRange})`}
                 >
@@ -324,7 +324,7 @@ function CompareViewer() {
       <main className="mx-auto grid max-w-7xl gap-5 p-4 lg:grid-cols-12 lg:p-6">
         <div className="space-y-5 lg:col-span-8">
           {(epochsQuery.isLoading || pairQuery.isLoading) && (
-            <div className="flex items-center gap-2 rounded border border-[rgba(0,229,255,0.2)] bg-[rgba(0,229,255,0.07)] px-3 py-2 text-xs font-mono text-[var(--accent-cyan)]">
+            <div className="flex items-center gap-2 rounded border border-[rgba(212,175,55,0.2)] bg-[rgba(212,175,55,0.07)] px-3 py-2 text-xs font-mono text-[var(--accent-cyan)]">
               <Loader2 className="h-4 w-4 animate-spin" />
               {simulate
                 ? 'Generating the demo sky…'
@@ -332,7 +332,7 @@ function CompareViewer() {
             </div>
           )}
           {error && (
-            <div className="flex flex-wrap items-start gap-2 rounded border border-[rgba(239,71,111,0.4)] bg-[rgba(239,71,111,0.08)] p-3 text-xs text-[var(--text-secondary)]">
+            <div className="flex flex-wrap items-start gap-2 rounded border border-[rgba(224,113,95,0.4)] bg-[rgba(224,113,95,0.08)] p-3 text-xs text-[var(--text-secondary)]">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--danger)]" />
               <div className="min-w-0 flex-1 space-y-1">
                 <p>{(error as Error).message}</p>
@@ -469,12 +469,12 @@ function CompareViewer() {
                     value={coordInput}
                     onChange={(e) => setCoordInput(e.target.value)}
                     placeholder="Enter coords (e.g. 08h55m10s, -7d14m42s)"
-                    className="w-full rounded bg-[rgba(6,8,16,0.85)] border border-[var(--border-subtle)] pl-2 pr-2 py-1 text-[11px] font-mono text-white placeholder:text-[var(--text-muted)] focus:border-[var(--accent-cyan)] outline-none"
+                    className="w-full rounded bg-[rgba(10,11,15,0.85)] border border-[var(--border-subtle)] pl-2 pr-2 py-1 text-[11px] font-mono text-white placeholder:text-[var(--text-muted)] focus:border-[var(--accent-cyan)] outline-none"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="rounded bg-[var(--accent-cyan)] px-3 py-1 text-[11px] font-bold text-[#060810] hover:bg-[#00c8e0] transition-colors"
+                  className="rounded bg-[var(--accent-cyan)] px-3 py-1 text-[11px] font-bold text-[#0a0b0f] hover:bg-[#00c8e0] transition-colors"
                 >
                   Slew
                 </button>
@@ -537,7 +537,7 @@ function CompareViewer() {
 
 export default function ComparePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#060810]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#0a0b0f]" />}>
       <CompareViewer />
     </Suspense>
   );

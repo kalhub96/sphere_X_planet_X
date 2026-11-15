@@ -100,7 +100,7 @@ export default function CandidateList({
             <span className="text-xs font-semibold tracking-wider uppercase text-[var(--text-secondary)]">
               Transient Candidates
             </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-[rgba(255,107,53,0.15)] text-[var(--accent-orange)] font-mono font-bold">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-[rgba(200,121,58,0.15)] text-[var(--accent-orange)] font-mono font-bold">
               {filteredCandidates.length}
             </span>
           </div>
@@ -110,7 +110,7 @@ export default function CandidateList({
             <button
               onClick={handleExportAllCSV}
               title="Export filtered candidates as CSV"
-              className="p-1 px-2 rounded bg-[rgba(0,229,255,0.1)] hover:bg-[rgba(0,229,255,0.2)] text-[var(--accent-cyan)] border border-[rgba(0,229,255,0.25)] text-[10px] font-mono flex items-center gap-1 transition-all"
+              className="p-1 px-2 rounded bg-[rgba(212,175,55,0.1)] hover:bg-[rgba(212,175,55,0.2)] text-[var(--accent-cyan)] border border-[rgba(212,175,55,0.25)] text-[10px] font-mono flex items-center gap-1 transition-all"
             >
               <Download className="w-3 h-3" />
               <span>CSV</span>
@@ -149,7 +149,7 @@ export default function CandidateList({
               onClick={() => setFilterType(tab.id)}
               className={`px-2 py-0.5 rounded transition-all ${
                 filterType === tab.id
-                  ? 'bg-[var(--accent-cyan)] text-[#060810] font-bold'
+                  ? 'bg-[var(--accent-cyan)] text-[#0a0b0f] font-bold'
                   : 'bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] text-[var(--text-secondary)]'
               }`}
             >
@@ -189,9 +189,9 @@ export default function CandidateList({
               <div
                 key={cand.id}
                 onClick={() => onSelect && onSelect(cand)}
-                className={`p-3 rounded-xl border transition-all cursor-pointer text-xs font-mono relative overflow-hidden ${
+                className={`p-3 rounded-sm border transition-all cursor-pointer text-xs font-mono relative overflow-hidden ${
                   isSelected
-                    ? 'bg-[rgba(0,229,255,0.12)] border-[var(--accent-cyan)] shadow-[0_0_16px_rgba(0,229,255,0.25)]'
+                    ? 'bg-[rgba(212,175,55,0.12)] border-[var(--accent-cyan)] shadow-[0_0_16px_rgba(212,175,55,0.25)]'
                     : 'bg-[rgba(0,0,0,0.3)] border-[var(--border-subtle)] hover:border-[var(--border-hover)] hover:bg-[rgba(255,255,255,0.03)]'
                 }`}
               >
@@ -240,17 +240,17 @@ export default function CandidateList({
                 {/* Artifact Clearance & Solar System Badges */}
                 <div className="pl-1.5 mb-2 flex items-center gap-1.5 flex-wrap">
                   {isNearBoundary ? (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-[rgba(239,71,111,0.2)] text-[var(--danger)] border border-[rgba(239,71,111,0.3)] flex items-center gap-1">
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-[rgba(224,113,95,0.2)] text-[var(--danger)] border border-[rgba(224,113,95,0.3)] flex items-center gap-1">
                       <AlertTriangle className="w-2.5 h-2.5" /> Edge Risk ({boundaryDist.toFixed(0)}px)
                     </span>
                   ) : (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-[rgba(0,229,255,0.08)] text-[var(--accent-cyan)] border border-[rgba(0,229,255,0.2)]">
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-[rgba(212,175,55,0.08)] text-[var(--accent-cyan)] border border-[rgba(212,175,55,0.2)]">
                       Clearance: {boundaryDist.toFixed(0)}px
                     </span>
                   )}
 
                   {cand.solar_system_crossmatch?.matched && (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-[rgba(255,107,53,0.15)] text-[var(--accent-orange)] border border-[rgba(255,107,53,0.3)]">
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-[rgba(200,121,58,0.15)] text-[var(--accent-orange)] border border-[rgba(200,121,58,0.3)]">
                       🪐 {cand.solar_system_crossmatch.nearest_body}
                     </span>
                   )}
