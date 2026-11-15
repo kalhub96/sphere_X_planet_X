@@ -11,7 +11,7 @@ from typing import Any, Final
 import httpx
 from sqlalchemy import select
 
-from ...domain.entities.observation import Observation
+from ...domain.entities.observation import Observation, is_simulated_obs_id
 from ...domain.exceptions import IRSAError
 from ..db.models import ObservationModel
 from ..db.session import create_tables, get_session_factory
@@ -60,7 +60,9 @@ class IRSASIAAdapter:
         database_url: str = "sqlite+aiosqlite:///./data/skytrace.db",
         timeout: float = 3.5,
         collections: tuple[str, str] = ("spherex_dr1", "spherex_qr3"),
+        allow_simulation: bool = True,
     ) -> None:
+        self._allow_simulation = allow_simulation
         self._url = sia2_url
         self._database_url = database_url
         self._timeout = timeout
@@ -128,8 +130,23 @@ class IRSASIAAdapter:
                 continue
             observations.append(observation)
 
-        # Multi-epoch survey baseline fallback across DR1 and QR3 if live archive returns < 2 passes
-        if len(observations) < 2:
+        # Offline demo fallback: only when the live archive returned fewer than
+        # 2 observations AND simulation is enabled. Every record produced here
+        # is flagged ``is_simulated=True`` so the API and UI can label it.
+        if len(observations) < 2 and not self._allow_simulation:
+            if errors and not observations:
+                raise IRSAError(
+                    "SPHEREx archive (IRSA) could not be reached and simulated "
+                    "data is disabled (ALLOW_SIMULATED_DATA=false)."
+                ) from errors[0]
+        elif len(observations) < 2:
+            logger.warning(
+                "IRSA returned %d observation(s) for ra=%.4f dec=%.4f; "
+                "adding SIMULATED demo epochs.",
+                len(observations),
+                ra,
+                dec,
+            )
             epochs = [
                 (60430.0, date(2025, 5, 15), "dr1", 1),
                 (60613.0, date(2025, 11, 14), "dr1", 2),
@@ -157,6 +174,7 @@ class IRSASIAAdapter:
                         obs_date=dt,
                         ra=ra,
                         dec=dec,
+                        is_simulated=True,
                     )
                     observations.append(obs)
 
@@ -340,12 +358,17 @@ class IRSASIAAdapter:
                             obs_date=row.obs_date,
                             ra=row.ra,
                             dec=row.dec,
+                            is_simulated=is_simulated_obs_id(row.id),
                         )
         except Exception:
             pass
         return None
 
     async def _save_to_db(self, obs: Observation) -> None:
+        # Never persist fabricated records: they would look like archive data
+        # the next time they are read back.
+        if obs.is_simulated:
+            return
         try:
             factory = get_session_factory()
             if factory is None:

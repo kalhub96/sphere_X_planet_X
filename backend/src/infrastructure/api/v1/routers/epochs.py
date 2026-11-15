@@ -16,6 +16,7 @@ from src.infrastructure.adapters.numpy_processor import NumpyImageProcessor
 from src.infrastructure.adapters.redis_cache import RedisCache
 from src.infrastructure.adapters.sqlite_candidate_repo import SQLiteCandidateRepository
 from src.domain.entities.fits_image import FITSImage
+from src.domain.exceptions import IRSAError, NoDataError
 
 router = APIRouter(prefix="/api/v1/epochs", tags=["epochs"])
 
@@ -113,8 +114,19 @@ async def get_multi_epoch_flipbook(
                     band_index=epoch_img.band_index,
                     detector_array=array,
                     wavelength_um=round(epoch_img.wavelength_um, 3),
+                    is_simulated=bool(epoch_img.is_simulated),
                 )
             )
+
+        # Provenance: tell the client whether any frame is simulated demo data.
+        n_sim = sum(1 for img in epoch_images if img.is_simulated)
+        any_sim = n_sim > 0
+        if n_sim == 0:
+            data_source = "live"
+        elif n_sim == len(epoch_images):
+            data_source = "simulated"
+        else:
+            data_source = "mixed"
 
         # 4. Difference image (Epoch N - Epoch 1) and candidate detection
         difference_b64 = None
@@ -135,7 +147,7 @@ async def get_multi_epoch_flipbook(
 
             try:
                 detected_candidates = await processor.detect_sources(snr_map, wcs=first_ep.wcs)
-                comparison_id = f"epoch_{ra:.4f}_{dec:.4f}_{fov:.4f}"
+                comparison_id = f"{'sim_' if any_sim else ''}epoch_{ra:.4f}_{dec:.4f}_{fov:.4f}"
                 for cand in detected_candidates:
                     await candidate_repo.save(cand, comparison_id)
                 candidates_responses = [CandidateResponse(**cand.__dict__) for cand in detected_candidates]
@@ -153,11 +165,17 @@ async def get_multi_epoch_flipbook(
             difference_b64=difference_b64,
             falsecolor_b64=falsecolor_b64,
             candidates=candidates_responses,
+            data_source=data_source,
+            is_simulated=any_sim,
         )
-        await cache.set(cache_key, resp_obj.model_dump(), ttl=86400)
+        # Cache live results for a day, but only briefly cache simulated ones so
+        # real data replaces them as soon as the archive is reachable again.
+        await cache.set(cache_key, resp_obj.model_dump(), ttl=300 if any_sim else 86400)
         return resp_obj
 
     except HTTPException:
         raise
+    except (NoDataError, IRSAError) as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

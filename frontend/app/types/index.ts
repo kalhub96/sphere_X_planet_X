@@ -10,6 +10,8 @@ export interface Observation {
   epoch_mjd: number;
   quality_pct: number;
   fits_url: string;
+  /** True when the record came from the backend's offline demo fallback, not IRSA. */
+  is_simulated?: boolean;
 }
 
 export interface WavelengthBand {
@@ -48,7 +50,11 @@ export interface EpochFrame {
   band_index: number | null;
   detector_array: string | null;
   wavelength_um: number | null;
+  /** True when this frame's pixels are simulated demo data, not SPHEREx data. */
+  is_simulated?: boolean;
 }
+
+export type DataSource = 'live' | 'mixed' | 'simulated';
 
 export interface EpochsResult {
   ra: number;
@@ -61,6 +67,9 @@ export interface EpochsResult {
   difference_b64: string | null;
   falsecolor_b64: string | null;
   candidates?: Candidate[];
+  /** "live" = all frames from the SPHEREx archive; "mixed"/"simulated" = demo data involved. */
+  data_source?: DataSource;
+  is_simulated?: boolean;
 }
 
 export interface Candidate {
@@ -102,6 +111,7 @@ export interface ComparisonResult {
   falsecolor_b64?: string;
   wcs: WCSHeader;
   candidates: Candidate[];
+  metadata?: { is_simulated?: boolean; [key: string]: unknown };
 }
 
 export interface PhotometryPoint {

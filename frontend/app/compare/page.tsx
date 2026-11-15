@@ -20,6 +20,7 @@ import {
 
 import BlinkViewer from '../components/comparison/BlinkViewer';
 import DiscoveryGuideModal from '../components/comparison/DiscoveryGuideModal';
+import SimulatedDataBanner from '../components/comparison/SimulatedDataBanner';
 import CandidateList from '../components/candidate/CandidateList';
 import EvidencePanel from '../components/candidate/EvidencePanel';
 import WavelengthSlider from '../components/sky/WavelengthSlider';
@@ -70,7 +71,10 @@ function CompareViewer() {
     epochMjd: frame.epoch_mjd,
     wcs: frame.wcs,
     flags: frame.flags,
+    isSimulated: Boolean(frame.is_simulated),
   })) ?? [];
+
+  const isSimulated = Boolean(epochsQuery.data?.is_simulated || comparison?.metadata?.is_simulated);
 
   const error = epochsQuery.error ?? pairQuery.error;
 
@@ -224,9 +228,11 @@ function CompareViewer() {
           {error && (
             <div className="flex items-start gap-2 rounded border border-[rgba(239,71,111,0.4)] bg-[rgba(239,71,111,0.08)] p-3 text-xs text-[var(--text-secondary)]">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--danger)]" />
-              <span>Archive error: {(error as Error).message}. Multi-epoch baseline is preserved.</span>
+              <span>Archive error: {(error as Error).message}</span>
             </div>
           )}
+
+          <SimulatedDataBanner isSimulated={isSimulated} dataSource={epochsQuery.data?.data_source} />
 
           <BlinkViewer
             frames={epochFrames}

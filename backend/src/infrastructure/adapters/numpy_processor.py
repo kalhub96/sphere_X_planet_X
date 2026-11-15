@@ -79,6 +79,7 @@ class NumpyImageProcessor:
             band_index=image_b.band_index,
             obs_id=image_b.obs_id,
             quality_pct=image_b.quality_pct,
+            is_simulated=image_b.is_simulated,
         )
         return image_a, image_b_aligned
 
@@ -162,6 +163,7 @@ class NumpyImageProcessor:
             band_index=ref.band_index,
             obs_id=f"coadd_{ref.obs_id}",
             quality_pct=round(quality_pct, 1),
+            is_simulated=any(img.is_simulated for img in images),
         )
 
     async def subtract(self, image_a: FITSImage, image_b: FITSImage) -> tuple[np.ndarray, np.ndarray]:

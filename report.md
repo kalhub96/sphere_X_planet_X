@@ -16,7 +16,9 @@
 
 ---
 
-## Benchmark Validation Results (100% Real Verification Suite)
+## Benchmark Validation Results
+> **Data provenance:** these figures are only valid for a run where `GET /api/v1/epochs` reports `data_source: "live"`. If the SPHEREx archive is unreachable the app can show clearly labelled *simulated* demo frames instead; re-run `backend/scripts/verify_benchmarks.py` against the live archive and confirm before publishing these numbers.
+
 | Benchmark Target | Coordinates (ICRS & Sexagesimal) | Epochs Verified | Optimal Detector | Verified Signature & Latency |
 | :--- | :--- | :--- | :--- | :--- |
 | **Barnard's Star** | `269.4521°, +4.6934°`<br>`(17h 57m 48.5s, +04° 41' 36")` | 3 epochs (DR1 + QR3) | `D1` (0.75–1.1 µm) | Rapid Northward proper motion (`10.37″/yr`); black/white dipole in Difference; 11.7 ms cached |
